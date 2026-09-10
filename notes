@@ -1,0 +1,44 @@
+node -v to check what ver of node js you have
+npm -v to check what ver of package manager you have
+npm init -y to initate a new node project with package manager
+
+when it comes to typescript:
+node js can only compile javascript
+so when it comes to .ts file, its purpose is to prevent bugs by defining strict types
+Types tell your computer what type of value something like a variable can have
+
+To use typescript and other validation tools for ts, you need to install them by doing
+npm add --save-dev typescript tsx vitest @types/node
+
+**reminder to make a gitignore for node_modules
+we dont commit node_modules because it clogs the repo with unnecessary large files, it is bad practice
+other tips:
+never delete package-lock.json, it tracks your dependencies
+don't modify node_modules
+never commit your environment
+be careful of installing globals as it won't be listed in package.json
+
+Modules:
+there are two modules, ESM(best for any new projects) and commonjs(best for legacy projects)
+in ESM you must list import statements at the very top
+npm pkg set type=module updates your package.json type from commonjs to esm
+
+Tsconfig:
+this is a file that is needed to mark the root directory of your typescript project and also acts as a configuration blueprint
+
+When you have tsconfig.json, you can run tsc (the typescript compiler) in your terminal for your node js project
+The compiler will read your tsconfig.json file, find your TypeScript files, and compile them all into JavaScript in one go.
+
+You can generate tsconfig.json with npx tsc --init (included in node js)
+
+Src:
+where all your source code exists
+
+Typescript:
+ts interfaces are written as:
+export interface ____ {
+
+}
+their purpose is to define strict types
+you can use readonly to ensure that these types cannot be changed later
+

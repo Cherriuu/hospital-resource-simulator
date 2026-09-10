@@ -1,0 +1,29 @@
+{
+  "name": "hospital-resource-simulator",
+  "version": "1.0.0",
+  "description": "A hospital resource management system",
+  "homepage": "https://github.com/Cherriuu/hospital-resource-simulator#readme",
+  "bugs": {
+    "url": "https://github.com/Cherriuu/hospital-resource-simulator/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Cherriuu/hospital-resource-simulator.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "prototype.js",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.2",
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.0"
+  }
+}
