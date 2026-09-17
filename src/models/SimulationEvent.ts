@@ -47,5 +47,3 @@ export interface PersonnelRestore {
     readonly personnel: PersonnelType;
     readonly quantity: number;
 }
-
-export type SimulationEvents = PatientArrival | TreatmentComplete | ResourceFailure | ResourceRestore | PersonnelFailure | PersonnelRestore
