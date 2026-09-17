@@ -1,3 +1,6 @@
+// a variable seed whose type is a number is going to be assigned to the private variable state. 
+// when you pass a number through the constructor, it will be used to initialize the state of the random number generator.
+
 export class SeededRandom {
 
     private state: number;
@@ -6,7 +9,8 @@ export class SeededRandom {
         this.state = seed;
     }
 
-    // Linear congruential generator
+    // Linear congruential generator instead of rand
+    // generates a pseudo-random number between 0 and 1
     next(): number {
         this.state = (this.state * 1664525 + 1013904223) % 4294967296;
 

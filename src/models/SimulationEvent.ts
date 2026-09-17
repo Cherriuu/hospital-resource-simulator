@@ -1,6 +1,6 @@
 import type {ResourceType, PersonnelType} from "./patient";
 
-export type SimulationEvent = 'PatientArrival' | 'TreatmentComplete' | 'ResourceFailure' | 'ResourceRestore' | 'PersonnelFailure' | 'PersonnelRestore';
+export type SimulationEvent = PatientArrival | TreatmentComplete | ResourceFailure | ResourceRestore | PersonnelFailure | PersonnelRestore;
 
 export interface PatientArrival {
     readonly type: "PatientArrival";

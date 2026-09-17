@@ -126,6 +126,7 @@ export class PatientGenerator {
         return 1;
     }
 
+    // generates rate at which patients arrive at the hospital based on the patient rate defined in the workload profile.
     private generateInterarrivalTime(): number {
 
         const random = this.random_seed.next();
