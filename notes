@@ -42,3 +42,8 @@ export interface ____ {
 their purpose is to define strict types
 you can use readonly to ensure that these types cannot be changed later
 
+React + Vite:
+run from root: npm create vite@latest frontend
+npm run dev -> run server and update browser as changes are made
+
+

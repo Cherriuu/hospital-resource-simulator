@@ -1,3 +1,4 @@
+// just used for testing, can be ignored
 const patients = [
     {
         id: 1,
