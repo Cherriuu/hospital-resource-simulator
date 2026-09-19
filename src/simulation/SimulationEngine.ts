@@ -2,14 +2,19 @@ import type { Patient } from "../models/patient";
 import { EventQueue } from "./EventQueue";
 import { ResourceManager } from "../resources/resourcemanager";
 import type { SimulationEvent } from "../models/simulationevent";
+import type { SimulationResult } from "../models/SimulationResult";
 
 export class SimulationEngine {
     private resourceManager: ResourceManager;
     private patients: Patient[];
     private eventQueue: EventQueue;
+    private treatmentStartTimes: Map<number, number> = new Map();
 
     // Patients who arrived but could not get resources
     private waitingPatients: Patient[] = [];
+
+    // Results of the simulation for each patient
+    private simulationResults: SimulationResult[] = [];
 
     // Current simulation time
     private currentTime: number = 0;
@@ -111,6 +116,8 @@ export class SimulationEngine {
             patientid: patient.id
         };
 
+        this.treatmentStartTimes.set(patient.id, this.currentTime);
+
         this.sequence++;
 
         this.eventQueue.push(treatmentComplete);
@@ -139,7 +146,24 @@ export class SimulationEngine {
             return;
         }
 
+        const treatmentStartTime = this.treatmentStartTimes.get(patient.id);
+        const startTime = treatmentStartTime ?? patient.arrivalTime;
+
+        const result: SimulationResult = {
+            patientId: patient.id,
+            patientPriority: patient.priority,
+            arrivalTime: patient.arrivalTime,
+            treatmentStartTime: startTime,
+            treatmentEndTime: this.currentTime,
+            waitingTime: Math.max(0, startTime - patient.arrivalTime),
+            treatmentDuration: this.currentTime - startTime
+        };
+
+        this.simulationResults.push(result);
+
         this.resourceManager.releaseResources(patient);
+
+        this.treatmentStartTimes.delete(patient.id);
 
         console.log(
             `Time ${this.currentTime.toFixed(2)}: Patient ${patient.id} completed treatment`
@@ -165,5 +189,9 @@ export class SimulationEngine {
         }
 
         this.waitingPatients = stillWaiting;
+    }
+
+    public getSimulationResults(): SimulationResult[] {
+        return this.simulationResults;
     }
 }
