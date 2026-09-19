@@ -3,6 +3,7 @@ import { EventQueue } from "./EventQueue";
 import { ResourceManager } from "../resources/resourcemanager";
 import type { SimulationEvent } from "../models/simulationevent";
 import type { SimulationResult } from "../models/SimulationResult";
+import { Scheduler } from "../scheduling/Scheduler";
 
 export class SimulationEngine {
     private resourceManager: ResourceManager;
@@ -22,13 +23,13 @@ export class SimulationEngine {
     // Used to break ties between events with the same time
     private sequence: number = 0;
 
-    constructor(
-        resourceManager: ResourceManager,
-        patients: Patient[]
-    ) {
+    private scheduler: Scheduler;
+
+    constructor(resourceManager: ResourceManager, patients: Patient[], scheduler: Scheduler) {
         this.resourceManager = resourceManager;
         this.patients = patients;
         this.eventQueue = new EventQueue();
+        this.scheduler = scheduler;
     }
 
     public InitializeEvents(): void {
@@ -174,8 +175,9 @@ export class SimulationEngine {
 
     private ProcessWaitingPatients(): void {
         const stillWaiting: Patient[] = [];
+        const orderedPatients: Patient[] = this.scheduler.orderPatients(this.waitingPatients, this.currentTime);
 
-        for (const patient of this.waitingPatients) {
+        for (const patient of orderedPatients) {
             const canAllocate =
                 this.resourceManager.canAllocateResources(patient);
 

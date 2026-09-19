@@ -1,4 +1,5 @@
 import type { SimulationResult } from "../models/SimulationResult";
+import type { SimulationMetrics } from "../models/SimulationMetrics"
 
 export class MetricsCollector {
     private simulationResults: SimulationResult[] = [];
@@ -204,5 +205,26 @@ export class MetricsCollector {
     const durationInHours = duration / 60;
 
     return this.simulationResults.length / durationInHours;
+    }
+
+    public collectMetrics(): SimulationMetrics {
+
+    const metrics: SimulationMetrics = {
+        averageWaitingTime: this.calculateAverageWaitingTime(),
+        medianWaitingTime: this.calculateMedianWaitingTime(),
+        p95WaitingTime: this.calculateP95WaitingTime(),
+        maxWaitingTime: this.findMaxWaitingTime(),
+        waitingPercentage: this.calculateWaitingPercentage(),
+        completedPatients: this.completedPatientsCount(),
+        simulationDuration: this.calculateSimulationDuration(),
+        throughput: this.calculateThroughput(),
+        averageWaitingTimeNonUrgent: this.calculateAverageWaitingTimeForNonUrgentPatients(),
+        averageWaitingTimeLessUrgent: this.calculateAverageWaitingTimeForLessUrgentPatients(),
+        averageWaitingTimeUrgent: this.calculateAverageWaitingTimeForUrgentPatients(),
+        averageWaitingTimeEmergent: this.calculateAverageWaitingTimeForEmergent(),
+        averageWaitingTimeResuscitation: this.calculateAverageWaitingTimeForResuscitationPatients()
+    };
+
+    return metrics;
     }
 }

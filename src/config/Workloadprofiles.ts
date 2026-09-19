@@ -102,7 +102,7 @@ export const FluSurgeProfile: WorkloadProfile = {
 };
 
 
-export const MassCasultyProfile: WorkloadProfile = {
+export const MassCasualtyProfile: WorkloadProfile = {
     event_type: "MASS_CASUALTY",
 
     patient_rate: 40,
