@@ -5,9 +5,8 @@ export type ResourceType = 'general_ward_bed' | 'icu_bed' | 'operating_room' | '
 export type PersonnelType = 'physician' | 'nurse' | 'surgeon' | 'anesthesiologist';
 
 export interface PatientResourcesNeeded {
-    readonly resources: ResourceType;
-    readonly personnel: PersonnelType;
-    readonly personnelQuantity: number;
+    readonly resources: Partial<Record<ResourceType, number>>;
+    readonly personnel: Partial<Record<PersonnelType, number>>;
 }
 
 export interface Patient {

@@ -21,12 +21,16 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/node": "^22.20.2",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2",
     "vitest": "^5.0.0"
   },
   "dependencies": {
-    "@inquirer/prompts": "^8.7.2"
+    "@inquirer/prompts": "^8.7.2",
+    "@tailwindcss/vite": "^4.3.3",
+    "express": "^5.2.1",
+    "tailwindcss": "^4.3.3"
   }
 }

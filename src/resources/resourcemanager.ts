@@ -45,34 +45,72 @@ export class ResourceManager {
     // if patient can be allocated resources but not personnel, then the patient will wait until personnel is available. If resources are not available, we will decide what to do with the patient.
     // resources cannot be held up for the patient to wait for personnel to be available. 
     public canAllocateResources(patient: Patient): boolean {
-        const neededResources = patient.resourcesNeeded;
-        const availableResources = this.resourceSnapshot.available;
+    const needed = patient.resourcesNeeded;
+    const available = this.resourceSnapshot.available;
 
-        if (availableResources.resources[neededResources.resources] < 1) {
+    for (const [resource, quantity] of Object.entries(needed.resources)) {
+        const resourceType = resource as keyof typeof available.resources;
+
+        if (available.resources[resourceType] < quantity) {
             return false;
         }
+    }
 
-        if (availableResources.personnel[neededResources.personnel] < neededResources.personnelQuantity) {
+    for (const [personnel, quantity] of Object.entries(needed.personnel)) {
+        const personnelType = personnel as keyof typeof available.personnel;
+
+        if (available.personnel[personnelType] < quantity) {
             return false;
         }
+    }
 
-        return true;
+    return true;
     }
 
     // functions for adjusting the available resources and personnel when a patient is allocated or released from the hospital.
     public allocateResources(patient: Patient): void {
-        if (this.canAllocateResources(patient)) {
-            const neededResources = patient.resourcesNeeded;
-            this.resourceSnapshot.available.resources[neededResources.resources] -= 1;
-            this.resourceSnapshot.available.personnel[neededResources.personnel] -= neededResources.personnelQuantity;
+        if (!this.canAllocateResources(patient)) {
+            return;
+        }
+
+        const needed = patient.resourcesNeeded;
+        const available = this.resourceSnapshot.available;
+
+        for (const [resource, quantity] of Object.entries(needed.resources)) {
+            const resourceType = resource as keyof typeof available.resources;
+
+            available.resources[resourceType] -= quantity;
+        }
+
+        for (const [personnel, quantity] of Object.entries(needed.personnel)) {
+            const personnelType = personnel as keyof typeof available.personnel;
+
+            available.personnel[personnelType] -= quantity;
         }
     }
 
-    // come back later to add a check to ensure that the resources being released are not exceeding the total capacity of the hospital.
     public releaseResources(patient: Patient): void {
-        const neededResources = patient.resourcesNeeded;
-        this.resourceSnapshot.available.resources[neededResources.resources] += 1;
-        this.resourceSnapshot.available.personnel[neededResources.personnel] += neededResources.personnelQuantity;
+        const needed = patient.resourcesNeeded;
+        const available = this.resourceSnapshot.available;
+        const total = this.resourceSnapshot.total;
+
+        for (const [resource, quantity] of Object.entries(needed.resources)) {
+            const resourceType = resource as keyof typeof available.resources;
+
+            available.resources[resourceType] = Math.min(
+                available.resources[resourceType] + quantity,
+                total.resources[resourceType]
+            );
+        }
+
+        for (const [personnel, quantity] of Object.entries(needed.personnel)) {
+            const personnelType = personnel as keyof typeof available.personnel;
+
+            available.personnel[personnelType] = Math.min(
+                available.personnel[personnelType] + quantity,
+                total.personnel[personnelType]
+            );
+        }
     }
 
     public getResourceSnapshot(): ResourceSnapshot {

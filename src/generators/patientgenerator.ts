@@ -1,4 +1,4 @@
-import type { Patient, PatientPriority, ResourceType, PersonnelType } from "../models/patient";
+import type { Patient, PatientPriority, ResourceType, PersonnelType, PatientResourcesNeeded } from "../models/patient";
 import type { WorkloadProfile } from "../models/workloadprofile";
 import { SeededRandom } from "../random/seededrandom";
 
@@ -65,65 +65,51 @@ export class PatientGenerator {
         }
     }
 
-    private generateResourceNeeded(): ResourceType {
-        const random = this.random_seed.next();
-        const probabilities = this.profile.resource_probability;
+    private generateResourcesNeeded(): Partial<Record<ResourceType, number>> {
+    const probabilities = this.profile.resource_probability;
 
-        let cumulative = probabilities.general_ward_bed;
+    const resources: Partial<Record<ResourceType, number>> = {};
 
-        if (random < cumulative) {
-            return "general_ward_bed";
+    const resourceTypes: ResourceType[] = [
+        "general_ward_bed",
+        "icu_bed",
+        "operating_room",
+        "isolation_room",
+        "imaging_room"
+    ];
+
+    for (const resource of resourceTypes) {
+        if (this.random_seed.next() < probabilities[resource]) {
+            resources[resource] = 1;
         }
+    }
 
-        cumulative += probabilities.icu_bed;
-
-        if (random < cumulative) {
-            return "icu_bed";
-        }
-
-        cumulative += probabilities.operating_room;
-
-        if (random < cumulative) {
-            return "operating_room";
-        }
-
-        cumulative += probabilities.isolation_room;
-
-        if (random < cumulative) {
-            return "isolation_room";
-        }
-
-        return "imaging_room";
+    return resources;
     }
 
     private generateAge(): number {
         return this.random_seed.integer(1, 100);
     }
 
-    private generatePersonnel(priority: PatientPriority): PersonnelType {
+    private generatePersonnelNeeded(priority: PatientPriority): Partial<Record<PersonnelType, number>> {
 
-        if (priority === "resuscitation") {
-            return "physician";
-        }
-
-        if (priority === "emergent") {
-            return "physician";
-        }
-
-        return "nurse";
+    if (priority === "resuscitation") {
+        return {
+            physician: 1,
+            nurse: 2
+        };
     }
 
-    private generatePersonnelQuantity(priority: PatientPriority): number {
+    if (priority === "emergent") {
+        return {
+            physician: 1,
+            nurse: 1
+        };
+    }
 
-        if (priority === "resuscitation") {
-            return 3;
-        }
-
-        if (priority === "emergent") {
-            return 2;
-        }
-
-        return 1;
+    return {
+        nurse: 1
+    };
     }
 
     // generates rate at which patients arrive at the hospital based on the patient rate defined in the workload profile.
@@ -156,18 +142,14 @@ export class PatientGenerator {
             priority: priority,
 
             resourcesNeeded: {
-
-                resources: this.generateResourceNeeded(),
-
-                personnel: this.generatePersonnel(priority),
-
-                personnelQuantity:
-                    this.generatePersonnelQuantity(priority)
+                resources: this.generateResourcesNeeded(),
+                personnel: this.generatePersonnelNeeded(priority)
             }
         };
 
         return patient;
     }
+
 
     generatePatients(count: number): Patient[] {
 
