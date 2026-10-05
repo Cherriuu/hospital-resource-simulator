@@ -1,4 +1,4 @@
-import type {ResourceType, PersonnelType} from "./Patient";
+import type {ResourceType, PersonnelType} from "./Patient.js";
 
 export type SimulationEvent = PatientArrival | TreatmentComplete | ResourceFailure | ResourceRestore | PersonnelFailure | PersonnelRestore;
 
