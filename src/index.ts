@@ -14,7 +14,7 @@ import { input } from '@inquirer/prompts';
 import { PriorityandAgingScheduler } from "./scheduling/Priority+Aging";
 import { FCFSScheduler } from "./scheduling/FCFSScheduler";
 import { PriorityScheduler } from "./scheduling/PriorityScheduler";
-import type { WorkloadProfile } from "./models/workloadprofile";
+import type { WorkloadProfile } from "./models/WorkloadProfile";
 import { MetricsCollector } from "./metrics/MetricsCollector";
 
 const randomSeed = new SeededRandom(123); // keep the seed the same to simulate the same patients

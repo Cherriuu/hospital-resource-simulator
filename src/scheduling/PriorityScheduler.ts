@@ -1,4 +1,4 @@
-import type { Patient } from "../models/patient";
+import type { Patient } from "../models/Patient";
 import type { Scheduler } from "./Scheduler";
 
 const priorityRank = {

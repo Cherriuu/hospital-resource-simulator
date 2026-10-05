@@ -15,7 +15,13 @@ function SimulationControls({
     const [randomSeed, setRandomSeed] = useState("123");
 
 
+    const [isRunning, setIsRunning] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
     async function handleRunSimulation() {
+        if (isRunning) return;
+        setIsRunning(true);
+        setErrorMessage(null);
 
         const simulationConfig = {
             workloadProfile,
@@ -38,7 +44,8 @@ function SimulationControls({
 
 
             if (!response.ok) {
-                throw new Error("Simulation failed");
+                const failure = await response.json().catch(() => null);
+                throw new Error(failure?.error ?? `Simulation request failed (${response.status}). Please try again.`);
             }
 
 
@@ -54,11 +61,14 @@ function SimulationControls({
             onSimulationComplete(data);
 
         } catch (error) {
+            setErrorMessage(error instanceof Error ? error.message : "Failed to run simulation. Please try again.");
 
             console.error(
                 "Failed to run simulation:",
                 error
             );
+        } finally {
+            setIsRunning(false);
         }
     }
 
@@ -156,12 +166,14 @@ function SimulationControls({
 
             <button
                 onClick={handleRunSimulation}
+                disabled={isRunning}
                 className="border border-orange-950 rounded-lg px-6 py-3 bg-amber-50 font-serif hover:bg-amber-200 cursor-pointer"
             >
-                Run Simulation
+                {isRunning ? "Running…" : "Run Simulation"}
             </button>
 
         </div>
+        {errorMessage && <p role="alert" className="mt-4 text-red-800">{errorMessage}</p>}
 
     </div>
 );

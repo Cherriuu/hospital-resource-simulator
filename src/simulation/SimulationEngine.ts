@@ -1,7 +1,7 @@
-import type { Patient } from "../models/patient";
+import type { Patient } from "../models/Patient";
 import { EventQueue } from "./EventQueue";
 import { ResourceManager } from "../resources/resourcemanager";
-import type { SimulationEvent } from "../models/simulationevent";
+import type { SimulationEvent } from "../models/SimulationEvent";
 import type { SimulationResult } from "../models/SimulationResult";
 import { Scheduler } from "../scheduling/Scheduler";
 
