@@ -2,8 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "services": {
     "api": {
-      "root": ".",
-      "framework": "express"
+      "root": "."
     },
     "frontend": {
       "root": "frontend",
