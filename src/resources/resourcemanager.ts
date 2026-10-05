@@ -1,5 +1,5 @@
-import type { ResourceSnapshot } from "../models/Resources";
-import type { Patient } from "../models/Patient";
+import type { ResourceSnapshot } from "../models/Resources.js";
+import type { Patient } from "../models/Patient.js";
 
 // total and available start off the same initially.
 export const InitialResourceSnapshot: ResourceSnapshot = {

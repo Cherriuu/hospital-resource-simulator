@@ -1,5 +1,5 @@
-import type { Patient } from "../models/Patient";
-import type { Scheduler } from "./Scheduler";
+import type { Patient } from "../models/Patient.js";
+import type { Scheduler } from "./Scheduler.js";
 
 const priorityRank = {
     non_urgent: 1,

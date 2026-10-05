@@ -1,21 +1,21 @@
 // used for testing, will be removed later
 
-import { PatientGenerator } from "./generators/patientgenerator";
-import { SeededRandom } from "./random/seededrandom";
-import { NormalProfile } from "./config/Workloadprofiles";
-import { MassCasualtyProfile } from "./config/Workloadprofiles";
-import { FluSurgeProfile } from "./config/Workloadprofiles"; 
-import { ResourceManager } from "./resources/resourcemanager";
-import { InitialResourceSnapshot } from "./resources/resourcemanager";
-import { SimulationEngine } from "./simulation/SimulationEngine";
-import type { Scheduler } from "./scheduling/Scheduler";
+import { PatientGenerator } from "./generators/patientgenerator.js";
+import { SeededRandom } from "./random/seededrandom.js";
+import { NormalProfile } from "./config/Workloadprofiles.js";
+import { MassCasualtyProfile } from "./config/Workloadprofiles.js";
+import { FluSurgeProfile } from "./config/Workloadprofiles.js";
+import { ResourceManager } from "./resources/resourcemanager.js";
+import { InitialResourceSnapshot } from "./resources/resourcemanager.js";
+import { SimulationEngine } from "./simulation/SimulationEngine.js";
+import type { Scheduler } from "./scheduling/Scheduler.js";
 
 import { input } from '@inquirer/prompts';
-import { PriorityandAgingScheduler } from "./scheduling/Priority+Aging";
-import { FCFSScheduler } from "./scheduling/FCFSScheduler";
-import { PriorityScheduler } from "./scheduling/PriorityScheduler";
-import type { WorkloadProfile } from "./models/WorkloadProfile";
-import { MetricsCollector } from "./metrics/MetricsCollector";
+import { PriorityandAgingScheduler } from "./scheduling/Priority+Aging.js";
+import { FCFSScheduler } from "./scheduling/FCFSScheduler.js";
+import { PriorityScheduler } from "./scheduling/PriorityScheduler.js";
+import type { WorkloadProfile } from "./models/WorkloadProfile.js";
+import { MetricsCollector } from "./metrics/MetricsCollector.js";
 
 const randomSeed = new SeededRandom(123); // keep the seed the same to simulate the same patients
 const selectedProfile = await input({ message: "Type a workload profile (NORMAL, MASS_CASUALTY, FLU_SURGE):" });
