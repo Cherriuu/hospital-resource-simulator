@@ -1,4 +1,4 @@
-import type { WorkloadProfile } from "../models/workloadprofile";
+import type { WorkloadProfile } from "../models/WorkloadProfile";
 
 // patient rate is the number of patients that arrive at the hospital per hour.
 // resource probability is the probability that a patient will require a specific resource type.

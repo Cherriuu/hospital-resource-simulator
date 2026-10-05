@@ -151,3 +151,13 @@ npm run dev
 The discrete-event simulation engine, resource allocation system, scheduling strategies, metrics collection, API, and frontend are working.
 
 I'm currently expanding testing, benchmark analysis, and deployment.
+
+## Vercel Deployment
+
+Import the repository as one Vercel project. Set **Root Directory** to the repository root (leave it blank), rather than `frontend` or `backend`. The checked-in `vercel.json` sets the Vite framework, installs both packages, builds the frontend, and serves `frontend/dist`.
+
+The root `api/health.ts` and `api/simulations.ts` files expose the existing Express app as Vercel Functions. The frontend calls `/api/simulations` on the same domain. No database or separate backend host is required; every simulation runs in memory.
+
+If the project previously used the Services framework, switch the project framework preset to **Vite** and clear conflicting install/build/output overrides so the checked-in configuration applies. Redeploy after updating the settings.
+
+Verify the deployment by opening `/api/health` (it should return JSON), then run a simulation and confirm the results appear.
