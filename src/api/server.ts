@@ -27,8 +27,6 @@ import { MetricsCollector } from "../metrics/MetricsCollector";
 
 
 const app = express();
-const PORT = 3000;
-
 app.use(express.json());
 
 
@@ -211,8 +209,4 @@ app.post("/api/simulations", (req, res) => {
 });
 
 
-app.listen(PORT, () => {
-    console.log(
-        `Server running on port ${PORT}`
-    );
-});
+export default app;
