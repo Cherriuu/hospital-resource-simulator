@@ -21,15 +21,11 @@ function MetricsDashboard({ metrics }: MetricsDashboardProps) {
     }
 
     const utilizationLabels: Record<string, string> = {
-        general_ward_bed: "General ward beds",
-        icu_bed: "ICU beds",
-        operating_room: "Operating rooms",
+        ed_bed: "ED beds",
+        resus_bay: "Resuscitation bays",
         isolation_room: "Isolation rooms",
-        imaging_room: "Imaging rooms",
         physician: "Physicians",
-        nurse: "Nurses",
-        surgeon: "Surgeons",
-        anesthesiologist: "Anesthesiologists"
+        nurse: "Nurses"
     };
 
     const overloadedSummary = (metrics.overloadedResources ?? [])
@@ -74,7 +70,7 @@ function MetricsDashboard({ metrics }: MetricsDashboardProps) {
 
             {metrics.overloadedResources.length > 0 && (
                 <div className="mb-4 rounded border border-orange-300 bg-orange-100 px-4 py-3 font-serif text-sm text-orange-900">
-                    Overloaded: {overloadedSummary}. This hospital can't keep up with this workload, so waits keep growing the longer the simulation runs.
+                    Overloaded: {overloadedSummary}. Patients are arriving faster than this hospital can treat them, so queues build up during this period.
                 </div>
             )}
 

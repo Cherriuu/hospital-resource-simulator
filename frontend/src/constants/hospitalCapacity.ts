@@ -1,64 +1,48 @@
 export type HospitalCapacity = {
     resources: {
-        general_ward_bed: number;
-        icu_bed: number;
-        operating_room: number;
+        ed_bed: number;
+        resus_bay: number;
         isolation_room: number;
-        imaging_room: number;
     };
     personnel: {
         physician: number;
         nurse: number;
-        surgeon: number;
-        anesthesiologist: number;
     };
 };
 
 export const DEFAULT_HOSPITAL_CAPACITY: HospitalCapacity = {
     resources: {
-        general_ward_bed: 100,
-        icu_bed: 20,
-        operating_room: 5,
-        isolation_room: 10,
-        imaging_room: 15
+        ed_bed: 48,
+        resus_bay: 1,
+        isolation_room: 2
     },
     personnel: {
-        physician: 30,
-        nurse: 50,
-        surgeon: 10,
-        anesthesiologist: 5
+        physician: 6,
+        nurse: 15
     }
 };
 
 export const SMALL_COMMUNITY_HOSPITAL: HospitalCapacity = {
     resources: {
-        general_ward_bed: 40,
-        icu_bed: 6,
-        operating_room: 2,
-        isolation_room: 4,
-        imaging_room: 5
+        ed_bed: 24,
+        resus_bay: 1,
+        isolation_room: 1
     },
     personnel: {
-        physician: 10,
-        nurse: 20,
-        surgeon: 3,
-        anesthesiologist: 2
+        physician: 4,
+        nurse: 8
     }
 };
 
 export const LARGE_REGIONAL_HOSPITAL: HospitalCapacity = {
     resources: {
-        general_ward_bed: 250,
-        icu_bed: 50,
-        operating_room: 12,
-        isolation_room: 25,
-        imaging_room: 35
+        ed_bed: 96,
+        resus_bay: 2,
+        isolation_room: 4
     },
     personnel: {
-        physician: 70,
-        nurse: 130,
-        surgeon: 25,
-        anesthesiologist: 12
+        physician: 12,
+        nurse: 30
     }
 };
 

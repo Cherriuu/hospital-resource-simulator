@@ -1,36 +1,29 @@
 import type { ResourceSnapshot } from "../models/Resources.js";
 import type { Patient } from "../models/Patient.js";
+import { STAFF_SLOT_CAPACITY } from "../constants/edModel.js";
 
 // total and available start off the same initially.
 export const InitialResourceSnapshot: ResourceSnapshot = {
     total: {
         resources: {
-            general_ward_bed: 100,
-            icu_bed: 20,
-            operating_room: 5,
-            isolation_room: 10,
-            imaging_room: 15
+            ed_bed: 48,
+            resus_bay: 1,
+            isolation_room: 2
         },
         personnel: {
-            physician: 30,
-            nurse: 50,
-            surgeon: 10,
-            anesthesiologist: 5
+            physician: 6,
+            nurse: 15
         }
     },
     available: {
         resources: {
-            general_ward_bed: 100,
-            icu_bed: 20,
-            operating_room: 5,
-            isolation_room: 10,
-            imaging_room: 15
+            ed_bed: 48,
+            resus_bay: 1,
+            isolation_room: 2
         },
         personnel: {
-            physician: 30,
-            nurse: 50,
-            surgeon: 10,
-            anesthesiologist: 5
+            physician: 6,
+            nurse: 15
         }
     }
 }
@@ -39,7 +32,22 @@ export class ResourceManager {
     private resourceSnapshot: ResourceSnapshot;
 
     constructor(resourceSnapshot: ResourceSnapshot) {
-        this.resourceSnapshot = resourceSnapshot;
+        this.resourceSnapshot = {
+            total: {
+                resources: { ...resourceSnapshot.total.resources },
+                personnel: {
+                    nurse: resourceSnapshot.total.personnel.nurse * STAFF_SLOT_CAPACITY.nurse,
+                    physician: resourceSnapshot.total.personnel.physician * STAFF_SLOT_CAPACITY.physician
+                }
+            },
+            available: {
+                resources: { ...resourceSnapshot.available.resources },
+                personnel: {
+                    nurse: resourceSnapshot.available.personnel.nurse * STAFF_SLOT_CAPACITY.nurse,
+                    physician: resourceSnapshot.available.personnel.physician * STAFF_SLOT_CAPACITY.physician
+                }
+            }
+        };
     }
 
     // if patient can be allocated resources but not personnel, then the patient will wait until personnel is available. If resources are not available, we will decide what to do with the patient.

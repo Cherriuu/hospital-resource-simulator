@@ -1,8 +1,8 @@
 export type PatientPriority = 'non_urgent' | 'less_urgent' | 'urgent' | 'emergent' | 'resuscitation';
 
-export type ResourceType = 'general_ward_bed' | 'icu_bed' | 'operating_room' | 'isolation_room' | 'imaging_room';
+export type ResourceType = 'ed_bed' | 'resus_bay' | 'isolation_room';
 
-export type PersonnelType = 'physician' | 'nurse' | 'surgeon' | 'anesthesiologist';
+export type PersonnelType = 'physician' | 'nurse';
 
 export interface PatientResourcesNeeded {
     readonly resources: Partial<Record<ResourceType, number>>;

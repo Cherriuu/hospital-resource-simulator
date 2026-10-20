@@ -1,5 +1,6 @@
 import type { Patient, PersonnelType, ResourceType } from "../models/Patient.js";
 import type { HospitalCapacity } from "../models/Resources.js";
+import { STAFF_SLOT_CAPACITY } from "../constants/edModel.js";
 
 export type LoadCheckedType = ResourceType | PersonnelType;
 
@@ -16,18 +17,14 @@ export interface LoadCheckResult {
 const ZERO_CAPACITY_OVERLOAD_PERCENT = 9999;
 
 const RESOURCE_TYPES: ResourceType[] = [
-    "general_ward_bed",
-    "icu_bed",
-    "operating_room",
-    "isolation_room",
-    "imaging_room"
+    "ed_bed",
+    "resus_bay",
+    "isolation_room"
 ];
 
 const PERSONNEL_TYPES: PersonnelType[] = [
     "physician",
-    "nurse",
-    "surgeon",
-    "anesthesiologist"
+    "nurse"
 ];
 
 const ALL_TYPES: LoadCheckedType[] = [...RESOURCE_TYPES, ...PERSONNEL_TYPES];
@@ -55,6 +52,10 @@ export function checkWorkloadLoad(patients: Patient[], capacity: HospitalCapacit
 
     const lastArrivalTimeMinutes = patients.length > 0 ? patients[patients.length - 1].arrivalTime : 0;
     const arrivalSpanMinutes = Math.max(lastArrivalTimeMinutes, 1);
+    const slotCapacity = {
+        nurse: capacity.personnel.nurse * STAFF_SLOT_CAPACITY.nurse,
+        physician: capacity.personnel.physician * STAFF_SLOT_CAPACITY.physician
+    };
     const overloadedResources: OverloadedResource[] = [];
 
     for (const type of ALL_TYPES) {
@@ -66,7 +67,7 @@ export function checkWorkloadLoad(patients: Patient[], capacity: HospitalCapacit
 
         const capacityValue = type in capacity.resources
             ? capacity.resources[type as ResourceType]
-            : capacity.personnel[type as PersonnelType];
+            : slotCapacity[type as PersonnelType];
 
         if (capacityValue === 0) {
             overloadedResources.push({

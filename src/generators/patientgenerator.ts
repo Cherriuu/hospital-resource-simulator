@@ -1,6 +1,7 @@
 import type { Patient, PatientPriority, ResourceType, PersonnelType, PatientResourcesNeeded } from "../models/Patient.js";
 import type { WorkloadProfile } from "../models/WorkloadProfile.js";
 import { SeededRandom } from "../random/seededrandom.js";
+import { TRIAGE_TREATMENT_MEAN_MINUTES } from "../constants/edModel.js";
 
 export class PatientGenerator {
     private random_seed: SeededRandom;
@@ -100,48 +101,19 @@ export class PatientGenerator {
     }
 
     private generateTreatmentTime(priority: PatientPriority): number {
+        const mean = TRIAGE_TREATMENT_MEAN_MINUTES[priority];
+        const min = mean * 0.5;
+        const max = mean * 1.5;
 
-    const ranges = this.profile.treatment_range;
-
-    switch (priority) {
-
-        case "non_urgent":
-            return this.random_seed.range(ranges.non_urgent_range.min, ranges.non_urgent_range.max);
-
-        case "less_urgent":
-            return this.random_seed.range(ranges.less_urgent_range.min, ranges.less_urgent_range.max);
-
-        case "urgent":
-            return this.random_seed.range(ranges.urgent_range.min, ranges.urgent_range.max);
-
-        case "emergent":
-            return this.random_seed.range(ranges.emergent_range.min, ranges.emergent_range.max);
-
-        case "resuscitation":
-            return this.random_seed.range(ranges.resuscitation_range.min, ranges.resuscitation_range.max);
-        }
+        return this.random_seed.range(min, max);
     }
 
-    private generateResourcesNeeded(): Partial<Record<ResourceType, number>> {
-    const probabilities = this.profile.resource_probability;
-
-    const resources: Partial<Record<ResourceType, number>> = {};
-
-    const resourceTypes: ResourceType[] = [
-        "general_ward_bed",
-        "icu_bed",
-        "operating_room",
-        "isolation_room",
-        "imaging_room"
-    ];
-
-    for (const resource of resourceTypes) {
-        if (this.random_seed.next() < probabilities[resource]) {
-            resources[resource] = 1;
+    private usesIsolationRoom(priority: PatientPriority): boolean {
+        if (priority === "resuscitation") {
+            return false;
         }
-    }
 
-    return resources;
+        return this.random_seed.next() < this.profile.isolation_probability;
     }
 
     private generateAge(): number {
@@ -149,24 +121,39 @@ export class PatientGenerator {
     }
 
     private generatePersonnelNeeded(priority: PatientPriority): Partial<Record<PersonnelType, number>> {
+        const needed: Partial<Record<PersonnelType, number>> = {
+            physician: 1
+        };
 
-    const needed: Partial<Record<PersonnelType, number>> = {};
+        if (priority === "resuscitation") {
+            needed.nurse = 4;
+            return needed;
+        }
 
-    if (priority === "resuscitation") {
-        needed.physician = 1;
-        needed.nurse = 2;
-    }
+        if (priority === "emergent") {
+            needed.nurse = 2;
+            return needed;
+        }
 
-    if (priority === "emergent") {
-        needed.physician = 1;
         needed.nurse = 1;
+        return needed;
     }
 
-    if (priority === "non_urgent" || priority === "less_urgent" || priority === "urgent") {
-        needed.nurse = 1;
-    }
+    private generateResourcesNeeded(priority: PatientPriority): Partial<Record<ResourceType, number>> {
+        const resources: Partial<Record<ResourceType, number>> = {};
 
-    return needed;
+        if (priority === "resuscitation") {
+            resources.resus_bay = 1;
+            return resources;
+        }
+
+        if (this.usesIsolationRoom(priority)) {
+            resources.isolation_room = 1;
+        } else {
+            resources.ed_bed = 1;
+        }
+
+        return resources;
     }
 
     // Uses the active rate for the current time, and if an interval crosses a boundary,
@@ -192,13 +179,8 @@ export class PatientGenerator {
     private generatePatient(id: number, arrivalTime: number): Patient {
 
         const priority = this.generatePriority(arrivalTime);
-        const resources = this.generateResourcesNeeded();
+        const resources = this.generateResourcesNeeded(priority);
         const personnel = this.generatePersonnelNeeded(priority);
-
-        if (resources.operating_room === 1) {
-            personnel.surgeon = 1;
-            personnel.anesthesiologist = 1;
-        }
 
         const patient: Patient = {
 

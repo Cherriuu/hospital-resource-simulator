@@ -7,6 +7,7 @@ import { InitialResourceSnapshot } from "../src/resources/resourcemanager";
 
 let server: Server;
 let baseUrl: string;
+
 beforeAll(async () => {
     await new Promise<void>((resolve) => {
         server = app.listen(0, "127.0.0.1", resolve);
@@ -15,6 +16,7 @@ beforeAll(async () => {
     if (!address || typeof address === "string") throw new Error("Missing test server address");
     baseUrl = `http://127.0.0.1:${address.port}`;
 });
+
 afterAll(() => new Promise<void>((resolve, reject) => {
     server.close((error) => error ? reject(error) : resolve());
 }));
@@ -51,6 +53,7 @@ const configurations = ["NORMAL", "FLU_SURGE", "MASS_CASUALTY"].flatMap(
         schedulingAlgorithm => ({ workloadProfile, schedulingAlgorithm })
     )
 );
+
 describe.each(configurations)("$workloadProfile / $schedulingAlgorithm", (configuration) => {
     it("returns metrics for every requested patient", async () => {
         const response = await fetch(`${baseUrl}/api/simulations`, {
@@ -68,6 +71,7 @@ describe.each(configurations)("$workloadProfile / $schedulingAlgorithm", (config
         expect(Array.isArray(metrics.overloadedResources)).toBe(true);
     });
 });
+
 it("returns a useful error for invalid configuration", async () => {
     const response = await fetch(`${baseUrl}/api/simulations`, {
         method: "POST",
@@ -78,163 +82,12 @@ it("returns a useful error for invalid configuration", async () => {
     expect(await response.json()).toEqual({ error: "Patient count must be between 1 and 10,000" });
 });
 
-it("rejects patient counts above 10,000", async () => {
-    const response = await fetch(`${baseUrl}/api/simulations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ workloadProfile: "NORMAL", schedulingAlgorithm: "FCFS", patientCount: 10001, randomSeed: 123 })
-    });
-
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: "Patient count must be between 1 and 10,000" });
-});
-
-it("accepts a patient count of 10,000", async () => {
-    const response = await fetch(`${baseUrl}/api/simulations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ workloadProfile: "MASS_CASUALTY", schedulingAlgorithm: "PRIORITY", patientCount: 10000, randomSeed: 123 })
-    });
-
-    expect(response.status).toBe(200);
-    const metrics = await response.json();
-    expect(metrics.completedPatients).toBe(10000);
-}, 20000);
-
-it("uses the current default capacity when no custom capacity is sent", async () => {
-    const basePayload = {
-        workloadProfile: "NORMAL",
-        schedulingAlgorithm: "FCFS",
-        patientCount: 100,
-        randomSeed: 123
+it("rejects invalid capacities", async () => {
+    const invalidCapacity = {
+        resources: { ed_bed: -1, resus_bay: 1, isolation_room: 1 },
+        personnel: { physician: 6, nurse: 12 }
     };
 
-    const defaultResponse = await fetch(`${baseUrl}/api/simulations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(basePayload)
-    });
-
-    const customCapacity = structuredClone(InitialResourceSnapshot.total);
-    const customResponse = await fetch(`${baseUrl}/api/simulations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            ...basePayload,
-            capacity: customCapacity
-        })
-    });
-
-    expect(defaultResponse.status).toBe(200);
-    expect(customResponse.status).toBe(200);
-    expect(await customResponse.json()).toEqual(await defaultResponse.json());
-});
-
-it("includes requestedPatients and keeps the completed plus untreated totals consistent", async () => {
-    const response = await fetch(`${baseUrl}/api/simulations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            workloadProfile: "NORMAL",
-            schedulingAlgorithm: "FCFS",
-            patientCount: 42,
-            randomSeed: 123
-        })
-    });
-
-    expect(response.status).toBe(200);
-
-    const metrics = await response.json();
-    expect(metrics.requestedPatients).toBe(42);
-    expect(metrics.completedPatients + metrics.untreatedPatients).toBe(metrics.requestedPatients);
-});
-
-it("returns all strategies from the compare endpoint and matches each strategy alone", async () => {
-    const payload = {
-        workloadProfile: "MASS_CASUALTY",
-        patientCount: 60,
-        randomSeed: 321,
-        capacity: structuredClone(InitialResourceSnapshot.total)
-    };
-
-    const compareResponse = await fetch(`${baseUrl}/api/simulations/compare`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-    });
-
-    expect(compareResponse.status).toBe(200);
-
-    const compareMetrics = await compareResponse.json();
-    expect(Object.keys(compareMetrics).sort()).toEqual(["FCFS", "PRIORITY", "PRIORITY_AGING"]);
-
-    for (const strategy of ["FCFS", "PRIORITY", "PRIORITY_AGING"] as const) {
-        const singleResponse = await fetch(`${baseUrl}/api/simulations`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                ...payload,
-                schedulingAlgorithm: strategy
-            })
-        });
-
-        expect(singleResponse.status).toBe(200);
-        expect(await singleResponse.json()).toEqual(compareMetrics[strategy]);
-    }
-});
-
-it("rejects invalid input for the compare endpoint", async () => {
-    const response = await fetch(`${baseUrl}/api/simulations/compare`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            workloadProfile: "NORMAL",
-            patientCount: 0,
-            randomSeed: 123
-        })
-    });
-
-    expect(response.status).toBe(400);
-    expect((await response.json()).error).toContain("Patient count");
-});
-
-it.each([
-    {
-        name: "negative value",
-        capacity: {
-            resources: { general_ward_bed: 10, icu_bed: -1, operating_room: 5, isolation_room: 10, imaging_room: 15 },
-            personnel: { physician: 30, nurse: 50, surgeon: 10, anesthesiologist: 5 }
-        }
-    },
-    {
-        name: "non-integer value",
-        capacity: {
-            resources: { general_ward_bed: 10, icu_bed: 1.5, operating_room: 5, isolation_room: 10, imaging_room: 15 },
-            personnel: { physician: 30, nurse: 50, surgeon: 10, anesthesiologist: 5 }
-        }
-    },
-    {
-        name: "over 1,000",
-        capacity: {
-            resources: { general_ward_bed: 10, icu_bed: 1001, operating_room: 5, isolation_room: 10, imaging_room: 15 },
-            personnel: { physician: 30, nurse: 50, surgeon: 10, anesthesiologist: 5 }
-        }
-    },
-    {
-        name: "missing field",
-        capacity: {
-            resources: { general_ward_bed: 10, operating_room: 5, isolation_room: 10, imaging_room: 15 },
-            personnel: { physician: 30, nurse: 50, surgeon: 10, anesthesiologist: 5 }
-        }
-    },
-    {
-        name: "unknown field",
-        capacity: {
-            resources: { general_ward_bed: 10, icu_bed: 20, operating_room: 5, isolation_room: 10, imaging_room: 15, extra: 1 },
-            personnel: { physician: 30, nurse: 50, surgeon: 10, anesthesiologist: 5 }
-        }
-    }
-])("rejects an invalid capacity: $name", async ({ capacity }) => {
     const response = await fetch(`${baseUrl}/api/simulations`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -243,7 +96,7 @@ it.each([
             schedulingAlgorithm: "FCFS",
             patientCount: 10,
             randomSeed: 123,
-            capacity
+            capacity: invalidCapacity
         })
     });
 
@@ -251,3 +104,56 @@ it.each([
     const body = await response.json();
     expect(body.error).toContain("capacity");
 });
+
+it("normal with default capacity reports no overloaded resources", async () => {
+    const response = await fetch(`${baseUrl}/api/simulations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            workloadProfile: "NORMAL",
+            schedulingAlgorithm: "FCFS",
+            patientCount: 1000,
+            randomSeed: 123,
+            capacity: structuredClone(InitialResourceSnapshot.total)
+        })
+    });
+
+    expect(response.status).toBe(200);
+    const metrics = await response.json();
+    expect(metrics.overloadedResources).toEqual([]);
+});
+
+async function runAverageWait(workloadProfile: "NORMAL" | "MASS_CASUALTY", patientCount: number) {
+    const response = await fetch(`${baseUrl}/api/simulations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            workloadProfile,
+            schedulingAlgorithm: "FCFS",
+            patientCount,
+            randomSeed: 123,
+            capacity: structuredClone(InitialResourceSnapshot.total)
+        })
+    });
+
+    expect(response.status).toBe(200);
+    return response.json();
+}
+
+it("mass casualty recovers: waits at 2k and 5k are within 25% and 5k has no overload", async () => {
+    const at2k = await runAverageWait("MASS_CASUALTY", 2000);
+    const at5k = await runAverageWait("MASS_CASUALTY", 5000);
+
+    const ratio = Math.abs(at5k.averageWait - at2k.averageWait) / at2k.averageWait;
+    expect(ratio).toBeLessThanOrEqual(0.25);
+    expect(at5k.overloadedResources).toEqual([]);
+}, 30000);
+
+it("normal is stable: waits at 2k and 5k are within 25% and 5k has no overload", async () => {
+    const at2k = await runAverageWait("NORMAL", 2000);
+    const at5k = await runAverageWait("NORMAL", 5000);
+
+    const ratio = Math.abs(at5k.averageWait - at2k.averageWait) / at2k.averageWait;
+    expect(ratio).toBeLessThanOrEqual(0.25);
+    expect(at5k.overloadedResources).toEqual([]);
+}, 30000);

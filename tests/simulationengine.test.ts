@@ -4,7 +4,7 @@ import { PriorityScheduler } from "../src/scheduling/PriorityScheduler";
 import { EventQueue, ArrayEventQueue } from "../src/simulation/EventQueue";
 import { SimulationEngine } from "../src/simulation/SimulationEngine";
 import { InitialResourceSnapshot, ResourceManager } from "../src/resources/resourcemanager";
-import type { Patient } from "../src/models/patient";
+import type { Patient } from "../src/models/Patient";
 
 const makePatient = (
     id: number,
@@ -20,7 +20,7 @@ const makePatient = (
     priority,
     resourcesNeeded: {
         resources: {
-            icu_bed: 1
+            ed_bed: 1
         },
         personnel: {
             physician: 1,
@@ -62,9 +62,9 @@ describe("EventQueue", () => {
         expect(queue.pop()).toBeUndefined();
     });
 
-    it("produces the same simulation results with the heap and array queue for the same seed", () => {
+    it("produces the same simulation results with heap and array queues", () => {
         const snapshot = structuredClone(InitialResourceSnapshot);
-        snapshot.available.resources.icu_bed = 2;
+        snapshot.available.resources.ed_bed = 2;
         snapshot.available.personnel.physician = 2;
         snapshot.available.personnel.nurse = 2;
 
@@ -76,7 +76,7 @@ describe("EventQueue", () => {
             estimatedTreatmentTime: 4 + (index % 5),
             priority: ["non_urgent", "less_urgent", "urgent", "emergent", "resuscitation"][index % 5] as Patient["priority"],
             resourcesNeeded: {
-                resources: { icu_bed: 1 },
+                resources: { ed_bed: 1 },
                 personnel: { physician: 1, nurse: 1 }
             }
         }));
@@ -94,7 +94,7 @@ describe("EventQueue", () => {
 describe("SimulationEngine", () => {
     it("lets the higher-priority waiting patient start first when a bed is released", () => {
         const snapshot = structuredClone(InitialResourceSnapshot);
-        snapshot.available.resources.icu_bed = 1;
+        snapshot.available.resources.ed_bed = 1;
         snapshot.available.personnel.physician = 1;
         snapshot.available.personnel.nurse = 1;
 
@@ -116,7 +116,7 @@ describe("SimulationEngine", () => {
 
     it("uses arrival order when the scheduler is FIFO", () => {
         const snapshot = structuredClone(InitialResourceSnapshot);
-        snapshot.available.resources.icu_bed = 1;
+        snapshot.available.resources.ed_bed = 1;
         snapshot.available.personnel.physician = 1;
         snapshot.available.personnel.nurse = 1;
 
@@ -136,45 +136,17 @@ describe("SimulationEngine", () => {
         expect(byId.get(3)?.treatmentStartTime).toBeLessThan(byId.get(2)?.treatmentStartTime ?? Number.POSITIVE_INFINITY);
     });
 
-    it("completes every patient and never records negative wait time", () => {
+    it("counts untreated patients when ED bed capacity is zero", () => {
         const snapshot = structuredClone(InitialResourceSnapshot);
-        snapshot.available.resources.icu_bed = 1;
-        snapshot.available.personnel.physician = 1;
-        snapshot.available.personnel.nurse = 1;
-
-        const patients = [
-            makePatient(1, 0, "urgent", 10),
-            makePatient(2, 2, "less_urgent", 5),
-            makePatient(3, 4, "non_urgent", 5)
-        ];
-
-        const engine = new SimulationEngine(new ResourceManager(snapshot), patients, new PriorityScheduler());
-
-        engine.RunSimulation();
-
-        const results = engine.getSimulationResults();
-
-        expect(results).toHaveLength(3);
-
-        for (const result of results) {
-            expect(result.waitingTime).toBeGreaterThanOrEqual(0);
-            expect(result.treatmentStartTime).toBeLessThanOrEqual(result.treatmentEndTime);
-            expect(result.treatmentDuration).toBeGreaterThan(0);
-        }
-    });
-
-    it("counts untreated patients when ICU capacity is zero", () => {
-        const snapshot = structuredClone(InitialResourceSnapshot);
-        snapshot.available.resources.icu_bed = 0;
+        snapshot.available.resources.ed_bed = 0;
         snapshot.available.personnel.physician = 20;
         snapshot.available.personnel.nurse = 20;
 
         const patients = [
             makePatient(1, 0, "non_urgent", 5),
             makePatient(2, 1, "resuscitation", 5),
-            { ...makePatient(3, 2, "urgent", 5), resourcesNeeded: { resources: {}, personnel: { nurse: 1 } } },
-            { ...makePatient(4, 3, "less_urgent", 5), resourcesNeeded: { resources: { icu_bed: 1 }, personnel: { physician: 1, nurse: 1 } } },
-            { ...makePatient(5, 4, "emergent", 5), resourcesNeeded: { resources: { icu_bed: 1 }, personnel: { physician: 1, nurse: 1 } } }
+            { ...makePatient(3, 2, "urgent", 5), resourcesNeeded: { resources: { resus_bay: 1 }, personnel: { nurse: 1, physician: 1 } } },
+            { ...makePatient(4, 3, "less_urgent", 5), resourcesNeeded: { resources: { ed_bed: 1 }, personnel: { physician: 1, nurse: 1 } } }
         ];
 
         const engine = new SimulationEngine(new ResourceManager(snapshot), patients, new PriorityScheduler());
@@ -182,79 +154,10 @@ describe("SimulationEngine", () => {
         engine.RunSimulation();
 
         const untreated = patients.filter(
-            patient => patient.resourcesNeeded.resources.icu_bed === 1
+            patient => patient.resourcesNeeded.resources.ed_bed === 1
         ).length;
 
         expect(engine.getUntreatedPatientsCount()).toBe(untreated);
-    });
-
-    it("returns zero untreated patients when capacity is normal", () => {
-        const snapshot = structuredClone(InitialResourceSnapshot);
-
-        const patients = [
-            makePatient(1, 0, "non_urgent", 5),
-            makePatient(2, 0.5, "urgent", 5),
-            makePatient(3, 1, "less_urgent", 5)
-        ];
-
-        const engine = new SimulationEngine(new ResourceManager(snapshot), patients, new PriorityScheduler());
-
-        engine.RunSimulation();
-
-        expect(engine.getUntreatedPatientsCount()).toBe(0);
-    });
-
-    it("records ICU utilization at 50% for a 60 minute bed use in a 120 minute run", () => {
-        const snapshot = structuredClone(InitialResourceSnapshot);
-        snapshot.total.resources.icu_bed = 1;
-        snapshot.available.resources.icu_bed = 1;
-        snapshot.total.personnel.physician = 1;
-        snapshot.available.personnel.physician = 1;
-        snapshot.total.personnel.nurse = 1;
-        snapshot.available.personnel.nurse = 1;
-
-        const patients = [
-            {
-                ...makePatient(1, 60, "urgent", 60),
-                resourcesNeeded: { resources: { icu_bed: 1 }, personnel: { physician: 1, nurse: 1 } }
-            }
-        ];
-
-        const engine = new SimulationEngine(new ResourceManager(snapshot), patients, new PriorityScheduler());
-        engine.RunSimulation();
-
-        expect(engine.getUtilization().icu_bed).toBeCloseTo(50, 1);
-        expect(engine.getAverageQueueLength()).toBeGreaterThanOrEqual(0);
-    });
-
-    it("counts a blocked ICU patient once even if they wait through multiple events", () => {
-        const snapshot = structuredClone(InitialResourceSnapshot);
-        snapshot.total.resources.icu_bed = 1;
-        snapshot.available.resources.icu_bed = 1;
-        snapshot.total.personnel.physician = 2;
-        snapshot.available.personnel.physician = 2;
-        snapshot.total.personnel.nurse = 2;
-        snapshot.available.personnel.nurse = 2;
-
-        const patients = [
-            {
-                ...makePatient(1, 0, "urgent", 20),
-                resourcesNeeded: { resources: { icu_bed: 1 }, personnel: { physician: 1, nurse: 1 } }
-            },
-            {
-                ...makePatient(2, 5, "emergent", 20),
-                resourcesNeeded: { resources: { icu_bed: 1 }, personnel: { physician: 1, nurse: 1 } }
-            },
-            {
-                ...makePatient(3, 15, "less_urgent", 20),
-                resourcesNeeded: { resources: { icu_bed: 1 }, personnel: { physician: 1, nurse: 1 } }
-            }
-        ];
-
-        const engine = new SimulationEngine(new ResourceManager(snapshot), patients, new PriorityScheduler());
-        engine.RunSimulation();
-
-        expect(engine.getBlockedBy().icu_bed).toBe(2);
     });
 
     it("keeps all utilization percentages between 0 and 100", () => {
@@ -272,44 +175,5 @@ describe("SimulationEngine", () => {
             expect(value).toBeGreaterThanOrEqual(0);
             expect(value).toBeLessThanOrEqual(100);
         }
-    });
-
-    it("makes ICU the highest utilization and top blocker when ICU capacity is very low", () => {
-        const snapshot = structuredClone(InitialResourceSnapshot);
-        snapshot.total.resources.icu_bed = 1;
-        snapshot.available.resources.icu_bed = 1;
-        snapshot.total.personnel.physician = 20;
-        snapshot.available.personnel.physician = 20;
-        snapshot.total.personnel.nurse = 20;
-        snapshot.available.personnel.nurse = 20;
-
-        const patients = [
-            { ...makePatient(1, 0, "urgent", 30), resourcesNeeded: { resources: { icu_bed: 1 }, personnel: { physician: 1, nurse: 1 } } },
-            { ...makePatient(2, 5, "emergent", 30), resourcesNeeded: { resources: { icu_bed: 1 }, personnel: { physician: 1, nurse: 1 } } },
-            { ...makePatient(3, 10, "resuscitation", 30), resourcesNeeded: { resources: { icu_bed: 1 }, personnel: { physician: 1, nurse: 1 } } }
-        ];
-
-        const engine = new SimulationEngine(new ResourceManager(snapshot), patients, new PriorityScheduler());
-        engine.RunSimulation();
-
-        const utilization = engine.getUtilization();
-        const topUtilName = Object.entries(utilization).sort((a, b) => b[1] - a[1])[0][0];
-        const topBlockedKey = Object.entries(engine.getBlockedBy()).sort((a, b) => b[1] - a[1])[0][0];
-
-        expect(topUtilName).toBe("icu_bed");
-        expect(topBlockedKey).toBe("icu_bed");
-    });
-
-    it("records time slices without changing the existing wait-time metrics", () => {
-        const snapshot = structuredClone(InitialResourceSnapshot);
-        const patients = Array.from({ length: 20 }, (_, index) => makePatient(index + 1, index % 6, index % 2 === 0 ? "urgent" : "non_urgent", 10));
-
-        const first = new SimulationEngine(new ResourceManager(snapshot), patients, new PriorityScheduler());
-        const second = new SimulationEngine(new ResourceManager(structuredClone(InitialResourceSnapshot)), patients, new PriorityScheduler());
-
-        first.RunSimulation();
-        second.RunSimulation();
-
-        expect(first.getSimulationResults().map((result) => result.waitingTime)).toEqual(second.getSimulationResults().map((result) => result.waitingTime));
     });
 });

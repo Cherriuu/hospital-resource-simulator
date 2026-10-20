@@ -1,16 +1,12 @@
 export interface ResourceCounts {
-    general_ward_bed: number;
-    icu_bed: number;
-    operating_room: number;
+    ed_bed: number;
+    resus_bay: number;
     isolation_room: number;
-    imaging_room: number;
 }
 
 export interface PersonnelCounts {
     physician: number;
     nurse: number;
-    surgeon: number;
-    anesthesiologist: number;
 }
 
 export interface HospitalCapacity {

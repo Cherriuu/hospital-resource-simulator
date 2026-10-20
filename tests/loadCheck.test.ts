@@ -12,17 +12,13 @@ describe("checkWorkloadLoad", () => {
 
         const tinyCapacity = {
             resources: {
-                general_ward_bed: 1,
-                icu_bed: 1,
-                operating_room: 1,
-                isolation_room: 1,
-                imaging_room: 1
+                ed_bed: 1,
+                resus_bay: 1,
+                isolation_room: 1
             },
             personnel: {
                 physician: 1,
-                nurse: 1,
-                surgeon: 1,
-                anesthesiologist: 1
+                nurse: 1
             }
         };
 

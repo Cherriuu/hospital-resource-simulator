@@ -33,18 +33,14 @@ const MAX_PATIENT_COUNT = 10_000;
 const MAX_CAPACITY_VALUE = 1_000;
 
 const RESOURCE_KEYS = [
-    "general_ward_bed",
-    "icu_bed",
-    "operating_room",
-    "isolation_room",
-    "imaging_room"
+    "ed_bed",
+    "resus_bay",
+    "isolation_room"
 ] as const;
 
 const PERSONNEL_KEYS = [
     "physician",
-    "nurse",
-    "surgeon",
-    "anesthesiologist"
+    "nurse"
 ] as const;
 
 function validateCapacity(capacity: unknown): HospitalCapacity {

@@ -235,15 +235,11 @@ function SimulationControls({
         : false;
 
     const readableTypeNames: Record<string, string> = {
-        general_ward_bed: "General ward beds",
-        icu_bed: "ICU beds",
-        operating_room: "Operating rooms",
+        ed_bed: "ED beds",
+        resus_bay: "Resuscitation bays",
         isolation_room: "Isolation rooms",
-        imaging_room: "Imaging rooms",
         physician: "Physicians",
-        nurse: "Nurses",
-        surgeon: "Surgeons",
-        anesthesiologist: "Anesthesiologists"
+        nurse: "Nurses"
     };
 
     const comparisonContextMetrics = comparisonResults
@@ -409,11 +405,9 @@ function SimulationControls({
                         {Object.entries(capacity.resources).map(([key, value]) => (
                             <div key={key}>
                                 <label className="mb-1 block font-serif text-base">
-                                    {key === "general_ward_bed" && "General ward beds"}
-                                    {key === "icu_bed" && "ICU beds"}
-                                    {key === "operating_room" && "Operating rooms"}
+                                    {key === "ed_bed" && "ED beds"}
+                                    {key === "resus_bay" && "Resuscitation bays"}
                                     {key === "isolation_room" && "Isolation rooms"}
-                                    {key === "imaging_room" && "Imaging rooms"}
                                 </label>
                                 <input
                                     type="number"
@@ -439,14 +433,20 @@ function SimulationControls({
                         Staff
                     </h4>
 
+                    <p className="mb-2 text-sm text-orange-950">
+                        each nurse covers up to 4 patients
+                    </p>
+
+                    <p className="mb-3 text-sm text-orange-950">
+                        each physician covers up to 8 patients
+                    </p>
+
                     <div className="space-y-3">
                         {Object.entries(capacity.personnel).map(([key, value]) => (
                             <div key={key}>
                                 <label className="mb-1 block font-serif text-base">
                                     {key === "physician" && "Physicians"}
                                     {key === "nurse" && "Nurses"}
-                                    {key === "surgeon" && "Surgeons"}
-                                    {key === "anesthesiologist" && "Anesthesiologists"}
                                 </label>
                                 <input
                                     type="number"
@@ -489,7 +489,7 @@ function SimulationControls({
 
                 {comparisonContextMetrics && comparisonContextMetrics.overloadedResources.length > 0 && (
                     <div className="mb-4 rounded border border-orange-300 bg-orange-100 px-4 py-3 font-serif text-sm text-orange-900">
-                        Overloaded: {overloadedComparisonSummary}. This hospital can't keep up with this workload, so waits keep growing the longer the simulation runs.
+                        Overloaded: {overloadedComparisonSummary}. Patients are arriving faster than this hospital can treat them, so queues build up during this period.
                     </div>
                 )}
 

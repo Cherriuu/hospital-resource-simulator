@@ -9,7 +9,7 @@ Patients are modeled using the five-level **Emergency Severity Index (ESI)** tri
 - Simulates patient arrivals, waiting, treatment, and resource release
 - Models five ESI-inspired patient priority levels
 - Tracks physical resources including ward beds, ICU beds, operating rooms, isolation rooms, and imaging rooms
-- Tracks personnel including physicians, nurses, surgeons, and anesthesiologists
+- Tracks ED staff roles including nurses and physicians
 - Supports normal, flu-surge, and mass-casualty workload profiles
 - Compares FCFS, priority, and priority-aging scheduling strategies
 - Uses seeded random generation so simulations can be reproduced

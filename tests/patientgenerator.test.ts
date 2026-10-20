@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { MassCasualtyProfile, NormalProfile } from "../src/config/Workloadprofiles";
 import { PatientGenerator } from "../src/generators/patientgenerator";
 import { SeededRandom } from "../src/random/seededrandom";
+import { TRIAGE_TREATMENT_MEAN_MINUTES } from "../src/constants/edModel";
 
 describe("PatientGenerator", () => {
     it("uses the same seed to produce the same patient list", () => {
@@ -14,19 +15,36 @@ describe("PatientGenerator", () => {
         expect(patients1).toEqual(patients2);
     });
 
-    it("adds surgeon and anesthesiologist whenever a patient needs an operating room", () => {
+    it("assigns fixed needs by triage and uses isolation room instead of ED bed", () => {
         const generator = new PatientGenerator(new SeededRandom(77), NormalProfile);
-        const patients = generator.generatePatients(500);
+        const patients = generator.generatePatients(2000);
 
         for (const patient of patients) {
-            const hasOperatingRoom = patient.resourcesNeeded.resources.operating_room === 1;
+            const resources = patient.resourcesNeeded.resources;
+            const personnel = patient.resourcesNeeded.personnel;
 
-            if (hasOperatingRoom) {
-                expect(patient.resourcesNeeded.personnel.surgeon).toBe(1);
-                expect(patient.resourcesNeeded.personnel.anesthesiologist).toBe(1);
-            } else {
-                expect(patient.resourcesNeeded.personnel.surgeon).toBeUndefined();
-                expect(patient.resourcesNeeded.personnel.anesthesiologist).toBeUndefined();
+            if (patient.priority === "resuscitation") {
+                expect(resources.resus_bay).toBe(1);
+                expect(resources.ed_bed).toBeUndefined();
+                expect(resources.isolation_room).toBeUndefined();
+                expect(personnel.nurse).toBe(4);
+                expect(personnel.physician).toBe(1);
+            }
+
+            if (patient.priority === "emergent") {
+                expect(personnel.nurse).toBe(2);
+                expect(personnel.physician).toBe(1);
+            }
+
+            if (patient.priority === "urgent" || patient.priority === "less_urgent" || patient.priority === "non_urgent") {
+                expect(personnel.nurse).toBe(1);
+                expect(personnel.physician).toBe(1);
+            }
+
+            if (patient.priority !== "resuscitation") {
+                const usesEdBed = resources.ed_bed === 1;
+                const usesIsolation = resources.isolation_room === 1;
+                expect(Number(usesEdBed) + Number(usesIsolation)).toBe(1);
             }
         }
     });
@@ -48,26 +66,33 @@ describe("PatientGenerator", () => {
         }
     });
 
-    it("keeps treatment times inside the profile range for each priority", () => {
+    it("keeps treatment times in the 0.5x-1.5x range and near each triage mean", () => {
         const generator = new PatientGenerator(new SeededRandom(11), NormalProfile);
-        const patients = generator.generatePatients(500);
+        const patients = generator.generatePatients(10000);
 
-        const ranges = {
-            non_urgent: NormalProfile.treatment_range.non_urgent_range,
-            less_urgent: NormalProfile.treatment_range.less_urgent_range,
-            urgent: NormalProfile.treatment_range.urgent_range,
-            emergent: NormalProfile.treatment_range.emergent_range,
-            resuscitation: NormalProfile.treatment_range.resuscitation_range
+        const buckets = {
+            non_urgent: [] as number[],
+            less_urgent: [] as number[],
+            urgent: [] as number[],
+            emergent: [] as number[],
+            resuscitation: [] as number[]
         };
 
         for (const patient of patients) {
-            const range = ranges[patient.priority];
-            expect(patient.estimatedTreatmentTime).toBeGreaterThanOrEqual(range.min);
-            expect(patient.estimatedTreatmentTime).toBeLessThanOrEqual(range.max);
+            const mean = TRIAGE_TREATMENT_MEAN_MINUTES[patient.priority];
+            expect(patient.estimatedTreatmentTime).toBeGreaterThanOrEqual(mean * 0.5);
+            expect(patient.estimatedTreatmentTime).toBeLessThanOrEqual(mean * 1.5);
+            buckets[patient.priority].push(patient.estimatedTreatmentTime);
+        }
+
+        for (const priority of Object.keys(buckets) as Array<keyof typeof buckets>) {
+            const values = buckets[priority];
+            const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+            expect(Math.abs(average - TRIAGE_TREATMENT_MEAN_MINUTES[priority])).toBeLessThanOrEqual(8);
         }
     });
 
-    it("keeps the observed priority share close to the configured profile probabilities", () => {
+    it("keeps normal priority shares close to NHAMCS probabilities", () => {
         const generator = new PatientGenerator(new SeededRandom(99), NormalProfile);
         const sampleSize = 10000;
         const patients = generator.generatePatients(sampleSize);
