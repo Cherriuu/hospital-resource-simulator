@@ -234,6 +234,28 @@ function SimulationControls({
         ? strategyNames.some(strategy => comparisonResults[strategy]?.untreatedPatients > 0)
         : false;
 
+    const readableTypeNames: Record<string, string> = {
+        general_ward_bed: "General ward beds",
+        icu_bed: "ICU beds",
+        operating_room: "Operating rooms",
+        isolation_room: "Isolation rooms",
+        imaging_room: "Imaging rooms",
+        physician: "Physicians",
+        nurse: "Nurses",
+        surgeon: "Surgeons",
+        anesthesiologist: "Anesthesiologists"
+    };
+
+    const comparisonContextMetrics = comparisonResults
+        ? comparisonResults.FCFS ?? comparisonResults.PRIORITY ?? comparisonResults.PRIORITY_AGING
+        : null;
+
+    const overloadedComparisonSummary = comparisonContextMetrics
+        ? comparisonContextMetrics.overloadedResources
+            .map((entry) => `${readableTypeNames[entry.type] ?? entry.type} (${entry.loadPercent.toFixed(0)}%)`)
+            .join(", ")
+        : "";
+
     return (
     <div className="py-8">
 
@@ -458,6 +480,18 @@ function SimulationControls({
                 <h3 className="font-serif text-2xl mb-4">
                     Strategy comparison
                 </h3>
+
+                {comparisonContextMetrics && (
+                    <p className="mb-4 font-serif text-base text-orange-950">
+                        {comparisonContextMetrics.requestedPatients} patients arriving over about {comparisonContextMetrics.arrivalSpanHours.toFixed(1)} hours.
+                    </p>
+                )}
+
+                {comparisonContextMetrics && comparisonContextMetrics.overloadedResources.length > 0 && (
+                    <div className="mb-4 rounded border border-orange-300 bg-orange-100 px-4 py-3 font-serif text-sm text-orange-900">
+                        Overloaded: {overloadedComparisonSummary}. This hospital can't keep up with this workload, so waits keep growing the longer the simulation runs.
+                    </div>
+                )}
 
                 {hasUntreatedStrategies && (
                     <div className="mb-4 rounded border border-orange-300 bg-orange-100 px-4 py-3 font-serif text-sm text-orange-900">

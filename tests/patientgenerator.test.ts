@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { NormalProfile } from "../src/config/Workloadprofiles";
+import { MassCasualtyProfile, NormalProfile } from "../src/config/Workloadprofiles";
 import { PatientGenerator } from "../src/generators/patientgenerator";
 import { SeededRandom } from "../src/random/seededrandom";
 
@@ -91,5 +91,37 @@ describe("PatientGenerator", () => {
 
             expect(Math.abs(observedShare - probability)).toBeLessThanOrEqual(tolerance);
         }
+    });
+
+    it("uses the same seed to produce the same mass-casualty patient list", () => {
+        const generator1 = new PatientGenerator(new SeededRandom(42), MassCasualtyProfile);
+        const generator2 = new PatientGenerator(new SeededRandom(42), MassCasualtyProfile);
+
+        const patients1 = generator1.generatePatients(200);
+        const patients2 = generator2.generatePatients(200);
+
+        expect(patients1).toEqual(patients2);
+    });
+
+    it("uses a much higher arrival rate during surge hours 2-8 than after hour 8", () => {
+        const generator = new PatientGenerator(new SeededRandom(123), MassCasualtyProfile);
+        const patients = generator.generatePatients(4000);
+
+        const surgeWindowStart = 2 * 60;
+        const surgeWindowEnd = 8 * 60;
+        const postSurgeWindowEnd = 14 * 60;
+
+        const surgeCount = patients.filter(
+            (patient) => patient.arrivalTime >= surgeWindowStart && patient.arrivalTime < surgeWindowEnd
+        ).length;
+
+        const postSurgeCount = patients.filter(
+            (patient) => patient.arrivalTime >= surgeWindowEnd && patient.arrivalTime < postSurgeWindowEnd
+        ).length;
+
+        const surgeRate = surgeCount / 6;
+        const postSurgeRate = postSurgeCount / 6;
+
+        expect(surgeRate).toBeGreaterThan(postSurgeRate * 2.5);
     });
 });

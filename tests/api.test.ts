@@ -42,6 +42,8 @@ it("exposes the compare endpoint through the Vercel entrypoint", async () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(Object.keys(body).sort()).toEqual(["FCFS", "PRIORITY", "PRIORITY_AGING"]);
+    expect(body.FCFS.arrivalSpanHours).toBeGreaterThan(0);
+    expect(Array.isArray(body.FCFS.overloadedResources)).toBe(true);
 });
 
 const configurations = ["NORMAL", "FLU_SURGE", "MASS_CASUALTY"].flatMap(
@@ -62,6 +64,8 @@ describe.each(configurations)("$workloadProfile / $schedulingAlgorithm", (config
         expect(metrics.simulationDuration).toBeGreaterThan(0);
         expect(Number.isFinite(metrics.averageWait)).toBe(true);
         expect(metrics.averageWaitByPriority).toHaveProperty("resuscitation");
+        expect(metrics.arrivalSpanHours).toBeGreaterThan(0);
+        expect(Array.isArray(metrics.overloadedResources)).toBe(true);
     });
 });
 it("returns a useful error for invalid configuration", async () => {

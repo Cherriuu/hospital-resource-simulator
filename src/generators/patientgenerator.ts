@@ -11,9 +11,66 @@ export class PatientGenerator {
         this.profile = profile;
     }
 
-    private generatePriority(): PatientPriority {
+    private isWithinSurge(arrivalTimeMinutes: number): boolean {
+        const surge = this.profile.surge;
+
+        if (!surge) {
+            return false;
+        }
+
+        const surgeStartMinutes = surge.start_hour * 60;
+        const surgeEndMinutes = surgeStartMinutes + (surge.duration_hours * 60);
+
+        return arrivalTimeMinutes >= surgeStartMinutes && arrivalTimeMinutes < surgeEndMinutes;
+    }
+
+    private getPriorityDistributionForArrival(arrivalTimeMinutes: number): WorkloadProfile["priority_distribution"] {
+        if (this.isWithinSurge(arrivalTimeMinutes)) {
+            return this.profile.surge!.priority_distribution;
+        }
+
+        return this.profile.priority_distribution;
+    }
+
+    private getArrivalRateForTime(arrivalTimeMinutes: number): number {
+        if (this.isWithinSurge(arrivalTimeMinutes)) {
+            return this.profile.surge!.patient_rate;
+        }
+
+        return this.profile.patient_rate;
+    }
+
+    private getNextRateBoundary(arrivalTimeMinutes: number): number | null {
+        const surge = this.profile.surge;
+
+        if (!surge) {
+            return null;
+        }
+
+        const surgeStartMinutes = surge.start_hour * 60;
+        const surgeEndMinutes = surgeStartMinutes + (surge.duration_hours * 60);
+
+        if (arrivalTimeMinutes < surgeStartMinutes) {
+            return surgeStartMinutes;
+        }
+
+        if (arrivalTimeMinutes < surgeEndMinutes) {
+            return surgeEndMinutes;
+        }
+
+        return null;
+    }
+
+    private sampleInterarrivalTime(patientRatePerHour: number): number {
         const random = this.random_seed.next();
-        const distribution = this.profile.priority_distribution;
+        const ratePerMinute = patientRatePerHour / 60;
+
+        return -Math.log(1 - random) / ratePerMinute;
+    }
+
+    private generatePriority(arrivalTime: number): PatientPriority {
+        const random = this.random_seed.next();
+        const distribution = this.getPriorityDistributionForArrival(arrivalTime);
 
         let cumulative = distribution.non_urgent;
 
@@ -112,19 +169,29 @@ export class PatientGenerator {
     return needed;
     }
 
-    // generates rate at which patients arrive at the hospital based on the patient rate defined in the workload profile.
-    private generateInterarrivalTime(): number {
+    // Uses the active rate for the current time, and if an interval crosses a boundary,
+    // jumps to that boundary and resamples with the new rate.
+    private generateInterarrivalTime(currentArrivalTime: number): number {
+        let elapsed = 0;
+        let cursorTime = currentArrivalTime;
 
-        const random = this.random_seed.next();
+        while (true) {
+            const activeRate = this.getArrivalRateForTime(cursorTime);
+            const sampledInterval = this.sampleInterarrivalTime(activeRate);
+            const nextBoundary = this.getNextRateBoundary(cursorTime);
 
-        const ratePerMinute = this.profile.patient_rate / 60;
+            if (nextBoundary === null || cursorTime + sampledInterval <= nextBoundary) {
+                return elapsed + sampledInterval;
+            }
 
-        return -Math.log(1 - random) / ratePerMinute;
+            elapsed += nextBoundary - cursorTime;
+            cursorTime = nextBoundary;
+        }
     }
 
     private generatePatient(id: number, arrivalTime: number): Patient {
 
-        const priority = this.generatePriority();
+        const priority = this.generatePriority(arrivalTime);
         const resources = this.generateResourcesNeeded();
         const personnel = this.generatePersonnelNeeded(priority);
 
@@ -166,7 +233,7 @@ export class PatientGenerator {
 
         for (let i = 1; i <= count; i++) {
 
-            arrivalTime += this.generateInterarrivalTime();
+            arrivalTime += this.generateInterarrivalTime(arrivalTime);
 
             const patient =
                 this.generatePatient(i, arrivalTime);

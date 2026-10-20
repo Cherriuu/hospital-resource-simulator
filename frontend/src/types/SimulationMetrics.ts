@@ -13,6 +13,11 @@ export type SimulationMetrics = {
     averageQueueLength: number;
     maxQueueLength: number;
     blockedBy: Record<string, number>;
+    arrivalSpanHours: number;
+    overloadedResources: Array<{
+        type: string;
+        loadPercent: number;
+    }>;
 
     averageWaitByPriority: {
         nonUrgent: number;

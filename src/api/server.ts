@@ -26,6 +26,7 @@ import { PriorityScheduler } from "../scheduling/PriorityScheduler.js";
 import { PriorityandAgingScheduler } from "../scheduling/Priority+Aging.js";
 
 import { MetricsCollector } from "../metrics/MetricsCollector.js";
+import { checkWorkloadLoad } from "../metrics/loadCheck.js";
 
 const app = express();
 const MAX_PATIENT_COUNT = 10_000;
@@ -224,9 +225,12 @@ function runSimulation(
     );
 
     const metrics = metricsCollector.collectMetrics();
+    const loadCheck = checkWorkloadLoad(patients, capacity);
 
     return {
         ...buildSimulationResponse(metrics),
+        arrivalSpanHours: loadCheck.arrivalSpanHours,
+        overloadedResources: loadCheck.overloadedResources,
         utilization: simulation.getUtilization(),
         averageQueueLength: simulation.getAverageQueueLength(),
         maxQueueLength: simulation.getMaxQueueLength(),

@@ -32,6 +32,10 @@ function MetricsDashboard({ metrics }: MetricsDashboardProps) {
         anesthesiologist: "Anesthesiologists"
     };
 
+    const overloadedSummary = (metrics.overloadedResources ?? [])
+        .map((entry) => `${utilizationLabels[entry.type] ?? entry.type} (${entry.loadPercent.toFixed(0)}%)`)
+        .join(", ");
+
     const utilizationEntries = Object.entries(metrics.utilization ?? {})
         .map(([name, value]) => ({
             name,
@@ -63,6 +67,16 @@ function MetricsDashboard({ metrics }: MetricsDashboardProps) {
             <p className="mb-4 font-serif text-xl text-orange-950">
                 {metrics.completedPatients} of {metrics.requestedPatients} patients treated
             </p>
+
+            <p className="mb-4 font-serif text-base text-orange-950">
+                {metrics.requestedPatients} patients arriving over about {metrics.arrivalSpanHours.toFixed(1)} hours.
+            </p>
+
+            {metrics.overloadedResources.length > 0 && (
+                <div className="mb-4 rounded border border-orange-300 bg-orange-100 px-4 py-3 font-serif text-sm text-orange-900">
+                    Overloaded: {overloadedSummary}. This hospital can't keep up with this workload, so waits keep growing the longer the simulation runs.
+                </div>
+            )}
 
             {metrics.untreatedPatients > 0 && (
                 <div className="mb-4 rounded border border-orange-300 bg-orange-100 px-4 py-3 font-serif text-sm text-orange-900">

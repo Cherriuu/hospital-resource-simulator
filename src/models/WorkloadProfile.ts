@@ -29,10 +29,18 @@ export interface ResourceProbabilities {
     readonly imaging_room: number;
 }
 
+export interface WorkloadSurge {
+    readonly start_hour: number;
+    readonly duration_hours: number;
+    readonly patient_rate: number;
+    readonly priority_distribution: PriorityDistributions;
+}
+
 export interface WorkloadProfile {
     readonly event_type: WorkloadType;
     readonly patient_rate: number;
     readonly priority_distribution: PriorityDistributions;
+    readonly surge?: WorkloadSurge;
     readonly treatment_range: TreatmentTimeRanges;
     readonly resource_probability: ResourceProbabilities;
 }

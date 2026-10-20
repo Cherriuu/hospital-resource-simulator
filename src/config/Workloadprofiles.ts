@@ -105,14 +105,21 @@ export const FluSurgeProfile: WorkloadProfile = {
 export const MassCasualtyProfile: WorkloadProfile = {
     event_type: "MASS_CASUALTY",
 
-    patient_rate: 40,
+    patient_rate: NormalProfile.patient_rate,
 
-    priority_distribution: {
-        non_urgent: 0.10,
-        less_urgent: 0.20,
-        urgent: 0.35,
-        emergent: 0.25,
-        resuscitation: 0.10
+    priority_distribution: { ...NormalProfile.priority_distribution },
+
+    surge: {
+        start_hour: 2,
+        duration_hours: 6,
+        patient_rate: 40,
+        priority_distribution: {
+            non_urgent: 0.10,
+            less_urgent: 0.20,
+            urgent: 0.35,
+            emergent: 0.25,
+            resuscitation: 0.10
+        }
     },
 
     treatment_range: {
