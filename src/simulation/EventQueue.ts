@@ -1,4 +1,4 @@
-import type { SimulationEvent } from "../models/simulationevent";
+import type { SimulationEvent } from "../models/SimulationEvent";
 
 export class EventQueue {
     private events: SimulationEvent[] = [];

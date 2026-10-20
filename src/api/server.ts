@@ -9,7 +9,7 @@ import {
     FluSurgeProfile
 } from "../config/Workloadprofiles";
 
-import type { WorkloadProfile } from "../models/workloadprofile";
+import type { WorkloadProfile } from "../models/WorkloadProfile";
 
 import {
     ResourceManager,

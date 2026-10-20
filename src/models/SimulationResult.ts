@@ -1,4 +1,4 @@
-import type { PatientPriority } from "./patient";
+import type { PatientPriority } from "./Patient";
 
 export interface SimulationResult {
     readonly patientId: number;

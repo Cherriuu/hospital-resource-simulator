@@ -1,5 +1,5 @@
-import type { Patient, PatientPriority, ResourceType, PersonnelType, PatientResourcesNeeded } from "../models/patient";
-import type { WorkloadProfile } from "../models/workloadprofile";
+import type { Patient, PatientPriority, ResourceType, PersonnelType, PatientResourcesNeeded } from "../models/Patient";
+import type { WorkloadProfile } from "../models/WorkloadProfile";
 import { SeededRandom } from "../random/seededrandom";
 
 export class PatientGenerator {

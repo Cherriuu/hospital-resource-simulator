@@ -41,18 +41,28 @@ export class MetricsCollector {
         if (this.simulationResults.length === 0) {
             return undefined;
         }
-        let array: number[] = [];
+
+        const array: number[] = [];
+
         for (const result of this.simulationResults) {
             array.push(result.waitingTime);
         }
+
         array.sort((a, b) => a - b);
         const mid = Math.floor(array.length / 2);
 
         if (array.length % 2 === 0) {
-            return (array[mid - 1] + array[mid]) / 2;
-        } else {
-            return array[mid];
+            const left = array[mid - 1];
+            const right = array[mid];
+
+            if (left === undefined || right === undefined) {
+                return array[0];
+            }
+
+            return (left + right) / 2;
         }
+
+        return array[mid];
     }
 
     public findMaxWaitingTime(): number | undefined {
