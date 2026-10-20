@@ -17,6 +17,9 @@ export const NormalProfile: WorkloadProfile = {
 };
 
 
+// Flu Surge: a 48-hour bounded surge, then back to a normal day.
+// Base rate, triage mix and isolation share match Normal (NHAMCS mix).
+// The surge rate (12/hour) and isolation share (20%) are scenario assumptions.
 export const FluSurgeProfile: WorkloadProfile = {
     event_type: "FLU_SURGE",
 

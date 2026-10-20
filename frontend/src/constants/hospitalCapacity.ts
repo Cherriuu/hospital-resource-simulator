@@ -10,11 +10,12 @@ export type HospitalCapacity = {
     };
 };
 
+// Keep these numbers in sync with InitialResourceSnapshot in src/resources/resourcemanager.ts.
 export const DEFAULT_HOSPITAL_CAPACITY: HospitalCapacity = {
     resources: {
         ed_bed: 48,
-        resus_bay: 1,
-        isolation_room: 2
+        resus_bay: 4,
+        isolation_room: 6
     },
     personnel: {
         physician: 6,
@@ -25,8 +26,8 @@ export const DEFAULT_HOSPITAL_CAPACITY: HospitalCapacity = {
 export const SMALL_COMMUNITY_HOSPITAL: HospitalCapacity = {
     resources: {
         ed_bed: 24,
-        resus_bay: 1,
-        isolation_room: 1
+        resus_bay: 2,
+        isolation_room: 3
     },
     personnel: {
         physician: 4,
@@ -37,8 +38,8 @@ export const SMALL_COMMUNITY_HOSPITAL: HospitalCapacity = {
 export const LARGE_REGIONAL_HOSPITAL: HospitalCapacity = {
     resources: {
         ed_bed: 96,
-        resus_bay: 2,
-        isolation_room: 4
+        resus_bay: 8,
+        isolation_room: 12
     },
     personnel: {
         physician: 12,

@@ -13,6 +13,8 @@ export interface WorkloadSurge {
     readonly duration_hours: number;
     readonly patient_rate: number;
     readonly priority_distribution: PriorityDistributions;
+    // Optional: share of patients who need isolation during the surge. Falls back to the profile's value.
+    readonly isolation_probability?: number;
 }
 
 export interface WorkloadProfile {

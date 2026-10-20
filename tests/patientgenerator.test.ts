@@ -87,8 +87,15 @@ describe("PatientGenerator", () => {
 
         for (const priority of Object.keys(buckets) as Array<keyof typeof buckets>) {
             const values = buckets[priority];
+            const mean = TRIAGE_TREATMENT_MEAN_MINUTES[priority];
             const average = values.reduce((sum, value) => sum + value, 0) / values.length;
-            expect(Math.abs(average - TRIAGE_TREATMENT_MEAN_MINUTES[priority])).toBeLessThanOrEqual(8);
+
+            // A uniform draw over [0.5 x mean, 1.5 x mean] has a standard deviation of mean / sqrt(12).
+            // The average of n draws varies by about that divided by sqrt(n) (the standard error),
+            // so rare levels like resuscitation get a wider tolerance than common ones like urgent.
+            const standardError = (mean / Math.sqrt(12)) / Math.sqrt(values.length);
+
+            expect(Math.abs(average - mean)).toBeLessThanOrEqual(3 * standardError);
         }
     });
 

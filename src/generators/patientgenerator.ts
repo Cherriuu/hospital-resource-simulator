@@ -108,12 +108,23 @@ export class PatientGenerator {
         return this.random_seed.range(min, max);
     }
 
-    private usesIsolationRoom(priority: PatientPriority): boolean {
+    // During a surge, use the surge's isolation share if it has one; otherwise the profile's.
+    private getIsolationProbabilityForArrival(arrivalTimeMinutes: number): number {
+        const surge = this.profile.surge;
+
+        if (this.isWithinSurge(arrivalTimeMinutes) && surge?.isolation_probability !== undefined) {
+            return surge.isolation_probability;
+        }
+
+        return this.profile.isolation_probability;
+    }
+
+    private usesIsolationRoom(priority: PatientPriority, arrivalTime: number): boolean {
         if (priority === "resuscitation") {
             return false;
         }
 
-        return this.random_seed.next() < this.profile.isolation_probability;
+        return this.random_seed.next() < this.getIsolationProbabilityForArrival(arrivalTime);
     }
 
     private generateAge(): number {
@@ -139,7 +150,7 @@ export class PatientGenerator {
         return needed;
     }
 
-    private generateResourcesNeeded(priority: PatientPriority): Partial<Record<ResourceType, number>> {
+    private generateResourcesNeeded(priority: PatientPriority, arrivalTime: number): Partial<Record<ResourceType, number>> {
         const resources: Partial<Record<ResourceType, number>> = {};
 
         if (priority === "resuscitation") {
@@ -147,7 +158,7 @@ export class PatientGenerator {
             return resources;
         }
 
-        if (this.usesIsolationRoom(priority)) {
+        if (this.usesIsolationRoom(priority, arrivalTime)) {
             resources.isolation_room = 1;
         } else {
             resources.ed_bed = 1;
@@ -179,7 +190,7 @@ export class PatientGenerator {
     private generatePatient(id: number, arrivalTime: number): Patient {
 
         const priority = this.generatePriority(arrivalTime);
-        const resources = this.generateResourcesNeeded(priority);
+        const resources = this.generateResourcesNeeded(priority, arrivalTime);
         const personnel = this.generatePersonnelNeeded(priority);
 
         const patient: Patient = {

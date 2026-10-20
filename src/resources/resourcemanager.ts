@@ -3,6 +3,7 @@ import type { Patient } from "../models/Patient.js";
 import { STAFF_SLOT_CAPACITY } from "../constants/edModel.js";
 
 // total and available start off the same initially.
+// Keep these numbers in sync with DEFAULT_HOSPITAL_CAPACITY in frontend/src/constants/hospitalCapacity.ts.
 export const InitialResourceSnapshot: ResourceSnapshot = {
     total: {
         resources: {

@@ -123,7 +123,7 @@ it("normal with default capacity reports no overloaded resources", async () => {
     expect(metrics.overloadedResources).toEqual([]);
 });
 
-async function runAverageWait(workloadProfile: "NORMAL" | "MASS_CASUALTY", patientCount: number) {
+async function runScenario(workloadProfile: "NORMAL" | "MASS_CASUALTY" | "FLU_SURGE", patientCount: number) {
     const response = await fetch(`${baseUrl}/api/simulations`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -140,20 +140,16 @@ async function runAverageWait(workloadProfile: "NORMAL" | "MASS_CASUALTY", patie
     return response.json();
 }
 
-it("mass casualty recovers: waits at 2k and 5k are within 25% and 5k has no overload", async () => {
-    const at2k = await runAverageWait("MASS_CASUALTY", 2000);
-    const at5k = await runAverageWait("MASS_CASUALTY", 5000);
+// A surge is diluted by the normal days after it, so average wait drops as runs get longer.
+// If the hospital recovers after the surge, the worst wait stays the same no matter how long the run is,
+// so recovery is checked with max wait instead of average wait.
+for (const workloadProfile of ["NORMAL", "MASS_CASUALTY", "FLU_SURGE"] as const) {
+    it(`${workloadProfile} recovers: max wait is the same at 2k and 5k patients and 5k has no overload`, async () => {
+        const at2k = await runScenario(workloadProfile, 2000);
+        const at5k = await runScenario(workloadProfile, 5000);
 
-    const ratio = Math.abs(at5k.averageWait - at2k.averageWait) / at2k.averageWait;
-    expect(ratio).toBeLessThanOrEqual(0.25);
-    expect(at5k.overloadedResources).toEqual([]);
-}, 30000);
-
-it("normal is stable: waits at 2k and 5k are within 25% and 5k has no overload", async () => {
-    const at2k = await runAverageWait("NORMAL", 2000);
-    const at5k = await runAverageWait("NORMAL", 5000);
-
-    const ratio = Math.abs(at5k.averageWait - at2k.averageWait) / at2k.averageWait;
-    expect(ratio).toBeLessThanOrEqual(0.25);
-    expect(at5k.overloadedResources).toEqual([]);
-}, 30000);
+        expect(at5k.maxWait).toBeLessThanOrEqual(at2k.maxWait * 1.1);
+        expect(at5k.untreatedPatients).toBe(0);
+        expect(at5k.overloadedResources).toEqual([]);
+    }, 30000);
+}
