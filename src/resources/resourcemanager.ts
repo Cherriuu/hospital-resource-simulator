@@ -144,6 +144,46 @@ export class ResourceManager {
         return null;
     }
 
+    // Every resource or staff type this patient is short on right now (not just the first one)
+    public findMissingTypes(patient: Patient): string[] {
+        const available = this.resourceSnapshot.available;
+        const missing: string[] = [];
+
+        for (const [resource, quantity] of Object.entries(patient.resourcesNeeded.resources)) {
+            if (available.resources[resource as keyof typeof available.resources] < quantity) {
+                missing.push(resource);
+            }
+        }
+
+        for (const [personnel, quantity] of Object.entries(patient.resourcesNeeded.personnel)) {
+            if (available.personnel[personnel as keyof typeof available.personnel] < quantity) {
+                missing.push(personnel);
+            }
+        }
+
+        return missing;
+    }
+
+    // Whether this patient could ever be treated here, even with every resource free.
+    // A patient who needs more than the hospital has should never hold resources for themselves.
+    public couldEverAllocate(patient: Patient): boolean {
+        const total = this.resourceSnapshot.total;
+
+        for (const [resource, quantity] of Object.entries(patient.resourcesNeeded.resources)) {
+            if (total.resources[resource as keyof typeof total.resources] < quantity) {
+                return false;
+            }
+        }
+
+        for (const [personnel, quantity] of Object.entries(patient.resourcesNeeded.personnel)) {
+            if (total.personnel[personnel as keyof typeof total.personnel] < quantity) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public getResourceSnapshot(): ResourceSnapshot {
         return this.resourceSnapshot;
     }

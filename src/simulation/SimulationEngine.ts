@@ -3,7 +3,7 @@ import { ArrayEventQueue, EventQueue } from "./EventQueue.js";
 import { ResourceManager } from "../resources/resourcemanager.js";
 import type { SimulationEvent } from "../models/SimulationEvent.js";
 import type { SimulationResult } from "../models/SimulationResult.js";
-import { Scheduler } from "../scheduling/Scheduler.js";
+import type { Scheduler } from "../scheduling/Scheduler.js";
 
 export interface SimulationEngineOptions {
     queueType?: "heap" | "array";
@@ -128,16 +128,13 @@ export class SimulationEngine {
             return;
         }
 
-        const canAllocate =
-            this.resourceManager.canAllocateResources(patient);
+        // Arrivals join the queue instead of starting right away, so they can't skip
+        // ahead of patients who are already waiting for the same resources.
+        this.waitingPatients.push(patient);
+        this.ProcessWaitingPatients();
 
-        if (canAllocate) {
-            this.resourceManager.allocateResources(patient);
-
-            this.StartTreatment(patient);
-        } else {
+        if (this.waitingPatients.includes(patient)) {
             this.blockPatientIfNeeded(patient);
-            this.waitingPatients.push(patient);
         }
     }
 
@@ -213,20 +210,39 @@ export class SimulationEngine {
         this.ProcessWaitingPatients();
     }
 
+    // Goes through waiting patients in the scheduler's order and starts everyone it can.
+    // When a patient can't start, the resources they're short on are held for them:
+    // patients further back in the order can still use anything else (like a free bed),
+    // but can't take a resource someone ahead of them is waiting for.
+    // Without this, patients who need less (1 nurse slot) keep taking each freed slot
+    // and patients who need more (2 nurse slots) can wait indefinitely.
     private ProcessWaitingPatients(): void {
         const stillWaiting: Patient[] = [];
+        const heldTypes = new Set<string>();
         const orderedPatients: Patient[] = this.scheduler.orderPatients(this.waitingPatients, this.currentTime);
 
         for (const patient of orderedPatients) {
-            const canAllocate =
-                this.resourceManager.canAllocateResources(patient);
+            const neededTypes = [
+                ...Object.keys(patient.resourcesNeeded.resources),
+                ...Object.keys(patient.resourcesNeeded.personnel)
+            ];
 
-            if (canAllocate) {
+            const needsHeldResource = neededTypes.some((type) => heldTypes.has(type));
+
+            if (!needsHeldResource && this.resourceManager.canAllocateResources(patient)) {
                 this.resourceManager.allocateResources(patient);
 
                 this.StartTreatment(patient);
-            } else {
-                stillWaiting.push(patient);
+                continue;
+            }
+
+            stillWaiting.push(patient);
+
+            // Only hold resources for patients this hospital could actually treat
+            if (this.resourceManager.couldEverAllocate(patient)) {
+                for (const type of this.resourceManager.findMissingTypes(patient)) {
+                    heldTypes.add(type);
+                }
             }
         }
 
