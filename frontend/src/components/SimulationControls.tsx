@@ -1,4 +1,9 @@
 import { useState } from "react";
+import {
+    DEFAULT_HOSPITAL_CAPACITY,
+    HOSPITAL_CAPACITY_PRESETS,
+    type HospitalCapacity
+} from "../constants/hospitalCapacity";
 import type { SimulationMetrics } from "../types/SimulationMetrics";
 
 type SimulationControlsProps = {
@@ -13,10 +18,28 @@ function SimulationControls({
     const [schedulingAlgorithm, setSchedulingAlgorithm] = useState("FCFS");
     const [patientCount, setPatientCount] = useState("100");
     const [randomSeed, setRandomSeed] = useState("123");
-
+    const [capacity, setCapacity] = useState<HospitalCapacity>(DEFAULT_HOSPITAL_CAPACITY);
 
     const [isRunning, setIsRunning] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+    function updateCapacityField(
+        section: "resources" | "personnel",
+        field: keyof HospitalCapacity["resources"] | keyof HospitalCapacity["personnel"],
+        value: number
+    ) {
+        setCapacity(currentCapacity => ({
+            ...currentCapacity,
+            [section]: {
+                ...currentCapacity[section],
+                [field]: value
+            }
+        }));
+    }
+
+    function isCurrentPreset(presetCapacity: HospitalCapacity) {
+        return JSON.stringify(presetCapacity) === JSON.stringify(capacity);
+    }
 
     async function handleRunSimulation() {
         if (isRunning) return;
@@ -27,7 +50,8 @@ function SimulationControls({
             workloadProfile,
             schedulingAlgorithm,
             patientCount: Number(patientCount),
-            randomSeed: Number(randomSeed)
+            randomSeed: Number(randomSeed),
+            capacity
         };
 
         try {
@@ -176,7 +200,113 @@ function SimulationControls({
             </button>
 
         </div>
-        {errorMessage && <p role="alert" className="mt-4 text-red-800">{errorMessage}</p>}
+
+        <div className="mt-8 border border-orange-950 rounded-lg bg-amber-50 p-5">
+            <h3 className="font-serif text-2xl mb-4">
+                Hospital capacity
+            </h3>
+
+            <div className="mb-4 flex flex-wrap gap-3">
+                {HOSPITAL_CAPACITY_PRESETS.map((preset) => {
+                    const active = isCurrentPreset(preset.capacity);
+
+                    return (
+                        <button
+                            key={preset.name}
+                            type="button"
+                            onClick={() => setCapacity(preset.capacity)}
+                            className={[
+                                "border rounded-lg px-3 py-2 font-serif text-sm",
+                                active
+                                    ? "border-orange-950 bg-orange-200 text-orange-950"
+                                    : "border-orange-950 bg-amber-50 text-orange-950 hover:bg-amber-200"
+                            ].join(" ")}
+                        >
+                            {preset.name}
+                        </button>
+                    );
+                })}
+            </div>
+
+            <p className="mb-5 text-sm text-orange-950">
+                Presets are illustrative and not real hospital data.
+            </p>
+
+            <div className="grid gap-6 md:grid-cols-2">
+                <div>
+                    <h4 className="font-serif text-xl mb-3">
+                        Rooms & beds
+                    </h4>
+
+                    <div className="space-y-3">
+                        {Object.entries(capacity.resources).map(([key, value]) => (
+                            <div key={key}>
+                                <label className="mb-1 block font-serif text-base">
+                                    {key === "general_ward_bed" && "General ward beds"}
+                                    {key === "icu_bed" && "ICU beds"}
+                                    {key === "operating_room" && "Operating rooms"}
+                                    {key === "isolation_room" && "Isolation rooms"}
+                                    {key === "imaging_room" && "Imaging rooms"}
+                                </label>
+                                <input
+                                    type="number"
+                                    min={0}
+                                    max={1000}
+                                    value={value}
+                                    onChange={(event) =>
+                                        updateCapacityField(
+                                            "resources",
+                                            key as keyof typeof capacity.resources,
+                                            Number(event.target.value)
+                                        )
+                                    }
+                                    className="w-full border border-orange-950 rounded-lg p-3 bg-amber-50 font-serif"
+                                />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div>
+                    <h4 className="font-serif text-xl mb-3">
+                        Staff
+                    </h4>
+
+                    <div className="space-y-3">
+                        {Object.entries(capacity.personnel).map(([key, value]) => (
+                            <div key={key}>
+                                <label className="mb-1 block font-serif text-base">
+                                    {key === "physician" && "Physicians"}
+                                    {key === "nurse" && "Nurses"}
+                                    {key === "surgeon" && "Surgeons"}
+                                    {key === "anesthesiologist" && "Anesthesiologists"}
+                                </label>
+                                <input
+                                    type="number"
+                                    min={0}
+                                    max={1000}
+                                    value={value}
+                                    onChange={(event) =>
+                                        updateCapacityField(
+                                            "personnel",
+                                            key as keyof typeof capacity.personnel,
+                                            Number(event.target.value)
+                                        )
+                                    }
+                                    className="w-full border border-orange-950 rounded-lg p-3 bg-amber-50 font-serif"
+                                />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {errorMessage && (
+            <p role="alert" className="mt-4 rounded border border-red-300 bg-red-100 px-4 py-3 text-red-800 font-serif">
+                {errorMessage}
+            </p>
+        )}
 
     </div>
 );
