@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { InitialResourceSnapshot, ResourceManager } from "../src/resources/resourcemanager";
-import type { Patient } from "../src/models/patient";
+import type { Patient } from "../src/models/Patient";
 
 describe("ResourceManager", () => {
     it("allocates a patient whose needs fit and reduces available counts by the exact amount required", () => {

@@ -14,6 +14,23 @@ describe("PatientGenerator", () => {
         expect(patients1).toEqual(patients2);
     });
 
+    it("adds surgeon and anesthesiologist whenever a patient needs an operating room", () => {
+        const generator = new PatientGenerator(new SeededRandom(77), NormalProfile);
+        const patients = generator.generatePatients(500);
+
+        for (const patient of patients) {
+            const hasOperatingRoom = patient.resourcesNeeded.resources.operating_room === 1;
+
+            if (hasOperatingRoom) {
+                expect(patient.resourcesNeeded.personnel.surgeon).toBe(1);
+                expect(patient.resourcesNeeded.personnel.anesthesiologist).toBe(1);
+            } else {
+                expect(patient.resourcesNeeded.personnel.surgeon).toBeUndefined();
+                expect(patient.resourcesNeeded.personnel.anesthesiologist).toBeUndefined();
+            }
+        }
+    });
+
     it("returns the requested number of patients with unique ids and non-decreasing arrival times", () => {
         const generator = new PatientGenerator(new SeededRandom(7), NormalProfile);
         const patients = generator.generatePatients(50);

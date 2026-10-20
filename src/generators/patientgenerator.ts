@@ -93,23 +93,23 @@ export class PatientGenerator {
 
     private generatePersonnelNeeded(priority: PatientPriority): Partial<Record<PersonnelType, number>> {
 
+    const needed: Partial<Record<PersonnelType, number>> = {};
+
     if (priority === "resuscitation") {
-        return {
-            physician: 1,
-            nurse: 2
-        };
+        needed.physician = 1;
+        needed.nurse = 2;
     }
 
     if (priority === "emergent") {
-        return {
-            physician: 1,
-            nurse: 1
-        };
+        needed.physician = 1;
+        needed.nurse = 1;
     }
 
-    return {
-        nurse: 1
-    };
+    if (priority === "non_urgent" || priority === "less_urgent" || priority === "urgent") {
+        needed.nurse = 1;
+    }
+
+    return needed;
     }
 
     // generates rate at which patients arrive at the hospital based on the patient rate defined in the workload profile.
@@ -125,6 +125,13 @@ export class PatientGenerator {
     private generatePatient(id: number, arrivalTime: number): Patient {
 
         const priority = this.generatePriority();
+        const resources = this.generateResourcesNeeded();
+        const personnel = this.generatePersonnelNeeded(priority);
+
+        if (resources.operating_room === 1) {
+            personnel.surgeon = 1;
+            personnel.anesthesiologist = 1;
+        }
 
         const patient: Patient = {
 
@@ -142,8 +149,8 @@ export class PatientGenerator {
             priority: priority,
 
             resourcesNeeded: {
-                resources: this.generateResourcesNeeded(),
-                personnel: this.generatePersonnelNeeded(priority)
+                resources: resources,
+                personnel: personnel
             }
         };
 

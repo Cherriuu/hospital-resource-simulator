@@ -51,5 +51,28 @@ it("returns a useful error for invalid configuration", async () => {
         body: JSON.stringify({ workloadProfile: "NORMAL", schedulingAlgorithm: "FCFS", patientCount: 0, randomSeed: 123 })
     });
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: "Patient count must be a positive integer" });
+    expect(await response.json()).toEqual({ error: "Patient count must be between 1 and 10,000" });
 });
+
+it("rejects patient counts above 10,000", async () => {
+    const response = await fetch(`${baseUrl}/api/simulations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workloadProfile: "NORMAL", schedulingAlgorithm: "FCFS", patientCount: 10001, randomSeed: 123 })
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Patient count must be between 1 and 10,000" });
+});
+
+it("accepts a patient count of 10,000", async () => {
+    const response = await fetch(`${baseUrl}/api/simulations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workloadProfile: "MASS_CASUALTY", schedulingAlgorithm: "PRIORITY", patientCount: 10000, randomSeed: 123 })
+    });
+
+    expect(response.status).toBe(200);
+    const metrics = await response.json();
+    expect(metrics.completedPatients).toBe(10000);
+}, 20000);

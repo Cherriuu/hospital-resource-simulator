@@ -142,11 +142,14 @@ function SimulationControls({
                 <input
                     type="number"
                     value={patientCount}
+                    min={1}
+                    max={10000}
                     onChange={(event) =>
                         setPatientCount(event.target.value)
                     }
                     className="border border-orange-950 rounded-lg p-3 bg-amber-50 font-serif w-32"
                 />
+                <p className="mt-2 text-sm text-orange-950">Limit: 1–10,000</p>
             </div>
 
             <div>

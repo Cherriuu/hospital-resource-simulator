@@ -97,10 +97,6 @@ export class SimulationEngine {
             this.StartTreatment(patient);
         } else {
             this.waitingPatients.push(patient);
-
-            console.log(
-                `Time ${this.currentTime.toFixed(2)}: Patient ${patient.id} is waiting`
-            );
         }
     }
 
@@ -122,10 +118,6 @@ export class SimulationEngine {
         this.sequence++;
 
         this.eventQueue.push(treatmentComplete);
-
-        console.log(
-            `Time ${this.currentTime.toFixed(2)}: Patient ${patient.id} started treatment`
-        );
     }
 
     private HandleTreatmentComplete(
@@ -165,10 +157,6 @@ export class SimulationEngine {
         this.resourceManager.releaseResources(patient);
 
         this.treatmentStartTimes.delete(patient.id);
-
-        console.log(
-            `Time ${this.currentTime.toFixed(2)}: Patient ${patient.id} completed treatment`
-        );
 
         this.ProcessWaitingPatients();
     }

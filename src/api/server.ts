@@ -27,6 +27,8 @@ import { MetricsCollector } from "../metrics/MetricsCollector.js";
 
 
 const app = express();
+const MAX_PATIENT_COUNT = 10_000;
+
 app.use(express.json());
 
 
@@ -63,10 +65,11 @@ app.post("/api/simulations", (req, res) => {
 
         if (
             !Number.isInteger(patientCount) ||
-            patientCount <= 0
+            patientCount <= 0 ||
+            patientCount > MAX_PATIENT_COUNT
         ) {
             return res.status(400).json({
-                error: "Patient count must be a positive integer"
+                error: "Patient count must be between 1 and 10,000"
             });
         }
 
