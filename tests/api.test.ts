@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Server } from "node:http";
 import app from "../api/simulations";
 import healthApp from "../api/health";
+import compareApp from "../api/simulations/compare";
 import { InitialResourceSnapshot } from "../src/resources/resourcemanager";
 
 let server: Server;
@@ -23,6 +24,24 @@ it("exposes the health endpoint through the Vercel entrypoint", async () => {
     const response = await fetch(`${baseUrl}/api/health`);
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ message: "Hospital Simulator API is running" });
+});
+
+it("exposes the compare endpoint through the Vercel entrypoint", async () => {
+    expect(compareApp).toBe(app);
+    const response = await fetch(`${baseUrl}/api/simulations/compare`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            workloadProfile: "NORMAL",
+            patientCount: 10,
+            randomSeed: 123,
+            capacity: structuredClone(InitialResourceSnapshot.total)
+        })
+    });
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(Object.keys(body).sort()).toEqual(["FCFS", "PRIORITY", "PRIORITY_AGING"]);
 });
 
 const configurations = ["NORMAL", "FLU_SURGE", "MASS_CASUALTY"].flatMap(
