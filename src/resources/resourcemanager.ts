@@ -7,8 +7,8 @@ export const InitialResourceSnapshot: ResourceSnapshot = {
     total: {
         resources: {
             ed_bed: 48,
-            resus_bay: 1,
-            isolation_room: 2
+            resus_bay: 4,
+            isolation_room: 6
         },
         personnel: {
             physician: 6,
@@ -18,8 +18,8 @@ export const InitialResourceSnapshot: ResourceSnapshot = {
     available: {
         resources: {
             ed_bed: 48,
-            resus_bay: 1,
-            isolation_room: 2
+            resus_bay: 4,
+            isolation_room: 6
         },
         personnel: {
             physician: 6,

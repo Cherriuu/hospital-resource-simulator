@@ -20,16 +20,19 @@ export const NormalProfile: WorkloadProfile = {
 export const FluSurgeProfile: WorkloadProfile = {
     event_type: "FLU_SURGE",
 
-    patient_rate: 15,
+    patient_rate: NormalProfile.patient_rate,
 
-    priority_distribution: {
-        non_urgent: 0.20,
-        less_urgent: 0.25,
-        urgent: 0.40,
-        emergent: 0.13,
-        resuscitation: 0.02
-    },
-    isolation_probability: 0.25
+    priority_distribution: { ...NormalProfile.priority_distribution },
+
+    isolation_probability: NormalProfile.isolation_probability,
+
+    surge: {
+        start_hour: 0,
+        duration_hours: 48,
+        patient_rate: 12,
+        priority_distribution: { ...NormalProfile.priority_distribution },
+        isolation_probability: 0.20
+    }
 };
 
 
