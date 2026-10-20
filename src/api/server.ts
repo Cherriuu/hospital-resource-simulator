@@ -11,6 +11,7 @@ import {
 
 import type { WorkloadProfile } from "../models/WorkloadProfile.js";
 import type { HospitalCapacity, PersonnelCounts, ResourceCounts } from "../models/Resources.js";
+import type { Patient } from "../models/Patient.js";
 
 import {
     ResourceManager,
@@ -125,6 +126,116 @@ function validateCapacity(capacity: unknown): HospitalCapacity {
     };
 }
 
+function validateSimulationRequest(body: Record<string, unknown>, requireSchedulingAlgorithm: boolean) {
+    const {
+        workloadProfile,
+        schedulingAlgorithm,
+        patientCount,
+        randomSeed,
+        capacity
+    } = body;
+
+    if (
+        !workloadProfile ||
+        patientCount === undefined ||
+        randomSeed === undefined ||
+        (requireSchedulingAlgorithm && !schedulingAlgorithm)
+    ) {
+        throw new Error("Missing simulation configuration");
+    }
+
+    const numericPatientCount = Number(patientCount);
+    const numericRandomSeed = Number(randomSeed);
+
+    if (
+        !Number.isInteger(numericPatientCount) ||
+        numericPatientCount <= 0 ||
+        numericPatientCount > MAX_PATIENT_COUNT
+    ) {
+        throw new Error("Patient count must be between 1 and 10,000");
+    }
+
+    if (!Number.isFinite(numericRandomSeed)) {
+        throw new Error("Random seed must be a valid number");
+    }
+
+    return {
+        workloadProfile: workloadProfile as string,
+        schedulingAlgorithm: schedulingAlgorithm as string | undefined,
+        patientCount: numericPatientCount,
+        randomSeed: numericRandomSeed,
+        capacity: validateCapacity(capacity)
+    };
+}
+
+function buildSimulationResponse(metrics: any) {
+    return {
+        averageWait: metrics.averageWaitingTime ?? 0,
+        medianWait: metrics.medianWaitingTime ?? 0,
+        p95Wait: metrics.p95WaitingTime ?? 0,
+        maxWait: metrics.maxWaitingTime ?? 0,
+        percentWaited: metrics.waitingPercentage ?? 0,
+        throughput: metrics.throughput ?? 0,
+        completedPatients: metrics.completedPatients,
+        untreatedPatients: metrics.untreatedPatients ?? 0,
+        requestedPatients: metrics.requestedPatients ?? 0,
+        simulationDuration: metrics.simulationDuration ?? 0,
+        averageWaitByPriority: {
+            nonUrgent: metrics.averageWaitingTimeNonUrgent ?? 0,
+            lessUrgent: metrics.averageWaitingTimeLessUrgent ?? 0,
+            urgent: metrics.averageWaitingTimeUrgent ?? 0,
+            emergent: metrics.averageWaitingTimeEmergent ?? 0,
+            resuscitation: metrics.averageWaitingTimeResuscitation ?? 0
+        }
+    };
+}
+
+function runSimulation(
+    patients: Patient[],
+    capacity: HospitalCapacity,
+    scheduler: Scheduler
+) {
+    const resourceSnapshot = {
+        total: {
+            resources: { ...capacity.resources },
+            personnel: { ...capacity.personnel }
+        },
+        available: {
+            resources: { ...capacity.resources },
+            personnel: { ...capacity.personnel }
+        }
+    };
+
+    const resourceManager = new ResourceManager(resourceSnapshot);
+
+    const simulation = new SimulationEngine(
+        resourceManager,
+        patients,
+        scheduler
+    );
+
+    simulation.RunSimulation();
+
+    const simulationResults = simulation.getSimulationResults();
+    const metricsCollector = new MetricsCollector(
+        simulationResults,
+        simulation.getUntreatedPatientsCount(),
+        patients.length
+    );
+
+    const metrics = metricsCollector.collectMetrics();
+
+    return buildSimulationResponse(metrics);
+}
+
+function compareStrategies(patients: Patient[], capacity: HospitalCapacity) {
+    return {
+        FCFS: runSimulation(patients, capacity, new FCFSScheduler()),
+        PRIORITY: runSimulation(patients, capacity, new PriorityScheduler()),
+        PRIORITY_AGING: runSimulation(patients, capacity, new PriorityandAgingScheduler())
+    };
+}
+
 app.use(express.json());
 
 
@@ -138,6 +249,17 @@ app.get("/api/health", (req, res) => {
 
 // Run simulation
 app.post("/api/simulations", (req, res) => {
+    let validatedRequest;
+
+    try {
+        validatedRequest = validateSimulationRequest(req.body, true);
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "Missing simulation configuration";
+        return res.status(400).json({
+            error: message
+        });
+    }
+
     try {
         const {
             workloadProfile,
@@ -145,48 +267,7 @@ app.post("/api/simulations", (req, res) => {
             patientCount,
             randomSeed,
             capacity
-        } = req.body;
-
-
-        // Validate request
-        if (
-            !workloadProfile ||
-            !schedulingAlgorithm ||
-            patientCount === undefined ||
-            randomSeed === undefined
-        ) {
-            return res.status(400).json({
-                error: "Missing simulation configuration"
-            });
-        }
-
-        if (
-            !Number.isInteger(patientCount) ||
-            patientCount <= 0 ||
-            patientCount > MAX_PATIENT_COUNT
-        ) {
-            return res.status(400).json({
-                error: "Patient count must be between 1 and 10,000"
-            });
-        }
-
-
-        if (!Number.isFinite(randomSeed)) {
-            return res.status(400).json({
-                error: "Random seed must be a valid number"
-            });
-        }
-
-        let normalizedCapacity: HospitalCapacity;
-
-        try {
-            normalizedCapacity = validateCapacity(capacity);
-        } catch (error) {
-            const message = error instanceof Error ? error.message : "capacity is invalid";
-            return res.status(400).json({
-                error: message
-            });
-        }
+        } = validatedRequest;
 
         let selectedProfile: WorkloadProfile;
 
@@ -232,41 +313,7 @@ app.post("/api/simulations", (req, res) => {
         const patients =
             generator.generatePatients(patientCount);
 
-        const resourceSnapshot = {
-            total: {
-                resources: { ...normalizedCapacity.resources },
-                personnel: { ...normalizedCapacity.personnel }
-            },
-            available: {
-                resources: { ...normalizedCapacity.resources },
-                personnel: { ...normalizedCapacity.personnel }
-            }
-        };
-
-        const resourceManager =
-            new ResourceManager(resourceSnapshot);
-
-        const simulation = new SimulationEngine(
-            resourceManager,
-            patients,
-            scheduler
-        );
-
-        simulation.RunSimulation();
-
-        const simulationResults =
-            simulation.getSimulationResults();
-
-        const metricsCollector =
-            new MetricsCollector(
-                simulationResults,
-                simulation.getUntreatedPatientsCount(),
-                patientCount
-            );
-
-        const metrics =
-            metricsCollector.collectMetrics();
-
+        const response = runSimulation(patients, capacity, scheduler);
 
         console.log("Simulation completed:", {
             workloadProfile,
@@ -275,54 +322,7 @@ app.post("/api/simulations", (req, res) => {
             randomSeed
         });
 
-        res.json({
-            averageWait:
-                metrics.averageWaitingTime ?? 0,
-
-            medianWait:
-                metrics.medianWaitingTime ?? 0,
-
-            p95Wait:
-                metrics.p95WaitingTime ?? 0,
-
-            maxWait:
-                metrics.maxWaitingTime ?? 0,
-
-            percentWaited:
-                metrics.waitingPercentage ?? 0,
-
-            throughput:
-                metrics.throughput ?? 0,
-
-            completedPatients:
-                metrics.completedPatients,
-
-            untreatedPatients:
-                metrics.untreatedPatients ?? 0,
-
-            requestedPatients:
-                metrics.requestedPatients ?? patientCount,
-
-            simulationDuration:
-                metrics.simulationDuration ?? 0,
-
-            averageWaitByPriority: {
-                nonUrgent:
-                    metrics.averageWaitingTimeNonUrgent ?? 0,
-
-                lessUrgent:
-                    metrics.averageWaitingTimeLessUrgent ?? 0,
-
-                urgent:
-                    metrics.averageWaitingTimeUrgent ?? 0,
-
-                emergent:
-                    metrics.averageWaitingTimeEmergent ?? 0,
-
-                resuscitation:
-                    metrics.averageWaitingTimeResuscitation ?? 0
-            }
-        });
+        res.json(response);
 
     } catch (error) {
 
@@ -333,6 +333,68 @@ app.post("/api/simulations", (req, res) => {
 
         res.status(500).json({
             error: "Simulation failed"
+        });
+    }
+});
+
+app.post("/api/simulations/compare", (req, res) => {
+    let validatedRequest;
+
+    try {
+        validatedRequest = validateSimulationRequest(req.body as Record<string, unknown>, false);
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "Missing simulation configuration";
+        return res.status(400).json({
+            error: message
+        });
+    }
+
+    try {
+        const {
+            workloadProfile,
+            patientCount,
+            randomSeed,
+            capacity
+        } = validatedRequest;
+
+        let selectedProfile: WorkloadProfile;
+
+        if (workloadProfile === "NORMAL") {
+            selectedProfile = NormalProfile;
+        }
+        else if (workloadProfile === "MASS_CASUALTY") {
+            selectedProfile = MassCasualtyProfile;
+        }
+        else if (workloadProfile === "FLU_SURGE") {
+            selectedProfile = FluSurgeProfile;
+        }
+        else {
+            return res.status(400).json({
+                error: `Unknown workload profile: ${workloadProfile}`
+            });
+        }
+
+        const seededRandom = new SeededRandom(randomSeed);
+        const generator = new PatientGenerator(
+            seededRandom,
+            selectedProfile
+        );
+        const patients = generator.generatePatients(patientCount);
+
+        console.log("Simulation comparison completed:", {
+            workloadProfile,
+            patientCount,
+            randomSeed
+        });
+
+        res.json(compareStrategies(patients, capacity));
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "Simulation comparison failed";
+
+        console.error("Simulation comparison failed:", error);
+
+        res.status(400).json({
+            error: message
         });
     }
 });

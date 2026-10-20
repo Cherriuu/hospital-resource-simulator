@@ -19,6 +19,7 @@ function SimulationControls({
     const [patientCount, setPatientCount] = useState("100");
     const [randomSeed, setRandomSeed] = useState("123");
     const [capacity, setCapacity] = useState<HospitalCapacity>(DEFAULT_HOSPITAL_CAPACITY);
+    const [comparisonResults, setComparisonResults] = useState<Record<string, SimulationMetrics> | null>(null);
 
     const [isRunning, setIsRunning] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -45,6 +46,7 @@ function SimulationControls({
         if (isRunning) return;
         setIsRunning(true);
         setErrorMessage(null);
+        setComparisonResults(null);
 
         const simulationConfig = {
             workloadProfile,
@@ -96,6 +98,129 @@ function SimulationControls({
         }
     }
 
+    async function handleCompareStrategies() {
+        if (isRunning) return;
+        setIsRunning(true);
+        setErrorMessage(null);
+
+        const simulationConfig = {
+            workloadProfile,
+            patientCount: Number(patientCount),
+            randomSeed: Number(randomSeed),
+            capacity
+        };
+
+        try {
+            const response = await fetch("/api/simulations/compare", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(simulationConfig)
+            });
+
+            if (!response.ok) {
+                const failure = await response.json().catch(() => null);
+                throw new Error(failure?.error ?? `Comparison request failed (${response.status}). Please try again.`);
+            }
+
+            const data = await response.json();
+            setComparisonResults(data);
+
+        } catch (error) {
+            setErrorMessage(error instanceof Error ? error.message : "Failed to compare strategies. Please try again.");
+            console.error("Failed to compare strategies:", error);
+        } finally {
+            setIsRunning(false);
+        }
+    }
+
+    const strategyNames = ["FCFS", "PRIORITY", "PRIORITY_AGING"];
+
+    const comparisonRows = [
+        {
+            label: "Average wait",
+            lowerBetter: true,
+            getValue: (metrics: SimulationMetrics) => metrics.averageWait,
+            format: (value: number) => `${value.toFixed(1)} min`
+        },
+        {
+            label: "Median wait",
+            lowerBetter: true,
+            getValue: (metrics: SimulationMetrics) => metrics.medianWait,
+            format: (value: number) => `${value.toFixed(1)} min`
+        },
+        {
+            label: "P95 wait",
+            lowerBetter: true,
+            getValue: (metrics: SimulationMetrics) => metrics.p95Wait,
+            format: (value: number) => `${value.toFixed(1)} min`
+        },
+        {
+            label: "Max wait",
+            lowerBetter: true,
+            getValue: (metrics: SimulationMetrics) => metrics.maxWait,
+            format: (value: number) => `${value.toFixed(1)} min`
+        },
+        {
+            label: "Patients waited",
+            lowerBetter: true,
+            getValue: (metrics: SimulationMetrics) => metrics.percentWaited,
+            format: (value: number) => `${value.toFixed(1)}%`
+        },
+        {
+            label: "Throughput",
+            lowerBetter: false,
+            getValue: (metrics: SimulationMetrics) => metrics.throughput,
+            format: (value: number) => `${value.toFixed(1)} patients/hr`
+        },
+        {
+            label: "Treated",
+            lowerBetter: false,
+            getValue: (metrics: SimulationMetrics) => metrics.completedPatients,
+            format: (value: number, metrics: SimulationMetrics) => `${value} of ${metrics.requestedPatients}`
+        },
+        {
+            label: "Untreated",
+            lowerBetter: true,
+            getValue: (metrics: SimulationMetrics) => metrics.untreatedPatients,
+            format: (value: number) => `${value}`
+        },
+        {
+            label: "Non-urgent",
+            lowerBetter: true,
+            getValue: (metrics: SimulationMetrics) => metrics.averageWaitByPriority.nonUrgent,
+            format: (value: number) => `${value.toFixed(1)} min`
+        },
+        {
+            label: "Less urgent",
+            lowerBetter: true,
+            getValue: (metrics: SimulationMetrics) => metrics.averageWaitByPriority.lessUrgent,
+            format: (value: number) => `${value.toFixed(1)} min`
+        },
+        {
+            label: "Urgent",
+            lowerBetter: true,
+            getValue: (metrics: SimulationMetrics) => metrics.averageWaitByPriority.urgent,
+            format: (value: number) => `${value.toFixed(1)} min`
+        },
+        {
+            label: "Emergent",
+            lowerBetter: true,
+            getValue: (metrics: SimulationMetrics) => metrics.averageWaitByPriority.emergent,
+            format: (value: number) => `${value.toFixed(1)} min`
+        },
+        {
+            label: "Resuscitation",
+            lowerBetter: true,
+            getValue: (metrics: SimulationMetrics) => metrics.averageWaitByPriority.resuscitation,
+            format: (value: number) => `${value.toFixed(1)} min`
+        }
+    ];
+
+    const hasUntreatedStrategies = comparisonResults
+        ? strategyNames.some(strategy => comparisonResults[strategy]?.untreatedPatients > 0)
+        : false;
 
     return (
     <div className="py-8">
@@ -197,6 +322,14 @@ function SimulationControls({
                 className="border border-orange-950 rounded-lg px-6 py-3 bg-amber-50 font-serif hover:bg-amber-200 cursor-pointer"
             >
                 {isRunning ? "Running…" : "Run Simulation"}
+            </button>
+
+            <button
+                onClick={handleCompareStrategies}
+                disabled={isRunning}
+                className="border border-orange-950 rounded-lg px-6 py-3 bg-amber-50 font-serif hover:bg-amber-200 cursor-pointer"
+            >
+                Compare all strategies
             </button>
 
         </div>
@@ -306,6 +439,74 @@ function SimulationControls({
             <p role="alert" className="mt-4 rounded border border-red-300 bg-red-100 px-4 py-3 text-red-800 font-serif">
                 {errorMessage}
             </p>
+        )}
+
+        {comparisonResults && (
+            <div className="mt-8 border border-orange-950 rounded-lg bg-amber-50 p-5">
+                <h3 className="font-serif text-2xl mb-4">
+                    Strategy comparison
+                </h3>
+
+                {hasUntreatedStrategies && (
+                    <div className="mb-4 rounded border border-orange-300 bg-orange-100 px-4 py-3 font-serif text-sm text-orange-900">
+                        Some strategies left patients untreated. Wait times only include treated patients.
+                    </div>
+                )}
+
+                <div className="overflow-x-auto">
+                    <table className="w-full border-collapse text-left text-orange-950">
+                        <thead>
+                            <tr>
+                                <th className="border border-orange-950 bg-amber-100 p-2 font-serif text-lg">Metric</th>
+                                {strategyNames.map((strategy) => (
+                                    <th key={strategy} className="border border-orange-950 bg-amber-100 p-2 font-serif text-lg">
+                                        {strategy}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {comparisonRows.map((row) => {
+                                const bestValue = strategyNames.reduce((best, strategy) => {
+                                    const currentValue = row.getValue(comparisonResults[strategy]);
+                                    if (best === null) {
+                                        return currentValue;
+                                    }
+                                    if (row.lowerBetter) {
+                                        return Math.min(best, currentValue);
+                                    }
+                                    return Math.max(best, currentValue);
+                                }, null as number | null);
+
+                                return (
+                                    <tr key={row.label}>
+                                        <th className="border border-orange-950 bg-amber-50 p-2 font-serif text-base text-left">
+                                            {row.label}
+                                        </th>
+                                        {strategyNames.map((strategy) => {
+                                            const metrics = comparisonResults[strategy];
+                                            const value = row.getValue(metrics);
+                                            const isBest = bestValue !== null && value === bestValue;
+
+                                            return (
+                                                <td
+                                                    key={`${row.label}-${strategy}`}
+                                                    className={[
+                                                        "border border-orange-950 p-2 text-center",
+                                                        isBest ? "bg-orange-200 font-bold" : "bg-amber-50"
+                                                    ].join(" ")}
+                                                >
+                                                    {row.format(value, metrics)}
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         )}
 
     </div>

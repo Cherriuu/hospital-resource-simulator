@@ -126,6 +126,55 @@ it("includes requestedPatients and keeps the completed plus untreated totals con
     expect(metrics.completedPatients + metrics.untreatedPatients).toBe(metrics.requestedPatients);
 });
 
+it("returns all strategies from the compare endpoint and matches each strategy alone", async () => {
+    const payload = {
+        workloadProfile: "MASS_CASUALTY",
+        patientCount: 60,
+        randomSeed: 321,
+        capacity: structuredClone(InitialResourceSnapshot.total)
+    };
+
+    const compareResponse = await fetch(`${baseUrl}/api/simulations/compare`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    });
+
+    expect(compareResponse.status).toBe(200);
+
+    const compareMetrics = await compareResponse.json();
+    expect(Object.keys(compareMetrics).sort()).toEqual(["FCFS", "PRIORITY", "PRIORITY_AGING"]);
+
+    for (const strategy of ["FCFS", "PRIORITY", "PRIORITY_AGING"] as const) {
+        const singleResponse = await fetch(`${baseUrl}/api/simulations`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                ...payload,
+                schedulingAlgorithm: strategy
+            })
+        });
+
+        expect(singleResponse.status).toBe(200);
+        expect(await singleResponse.json()).toEqual(compareMetrics[strategy]);
+    }
+});
+
+it("rejects invalid input for the compare endpoint", async () => {
+    const response = await fetch(`${baseUrl}/api/simulations/compare`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            workloadProfile: "NORMAL",
+            patientCount: 0,
+            randomSeed: 123
+        })
+    });
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toContain("Patient count");
+});
+
 it.each([
     {
         name: "negative value",
