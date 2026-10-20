@@ -113,6 +113,28 @@ export class ResourceManager {
         }
     }
 
+    public findMissingResource(patient: Patient): keyof typeof this.resourceSnapshot.available.resources | keyof typeof this.resourceSnapshot.available.personnel | null {
+        const available = this.resourceSnapshot.available;
+
+        for (const [resource, quantity] of Object.entries(patient.resourcesNeeded.resources)) {
+            const resourceType = resource as keyof typeof available.resources;
+
+            if (available.resources[resourceType] < quantity) {
+                return resourceType;
+            }
+        }
+
+        for (const [personnel, quantity] of Object.entries(patient.resourcesNeeded.personnel)) {
+            const personnelType = personnel as keyof typeof available.personnel;
+
+            if (available.personnel[personnelType] < quantity) {
+                return personnelType;
+            }
+        }
+
+        return null;
+    }
+
     public getResourceSnapshot(): ResourceSnapshot {
         return this.resourceSnapshot;
     }

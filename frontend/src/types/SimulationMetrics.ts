@@ -9,6 +9,10 @@ export type SimulationMetrics = {
     untreatedPatients: number;
     requestedPatients: number;
     simulationDuration: number;
+    utilization: Record<string, number>;
+    averageQueueLength: number;
+    maxQueueLength: number;
+    blockedBy: Record<string, number>;
 
     averageWaitByPriority: {
         nonUrgent: number;

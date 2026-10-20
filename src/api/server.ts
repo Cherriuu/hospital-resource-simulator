@@ -225,7 +225,13 @@ function runSimulation(
 
     const metrics = metricsCollector.collectMetrics();
 
-    return buildSimulationResponse(metrics);
+    return {
+        ...buildSimulationResponse(metrics),
+        utilization: simulation.getUtilization(),
+        averageQueueLength: simulation.getAverageQueueLength(),
+        maxQueueLength: simulation.getMaxQueueLength(),
+        blockedBy: simulation.getBlockedBy()
+    };
 }
 
 function compareStrategies(patients: Patient[], capacity: HospitalCapacity) {

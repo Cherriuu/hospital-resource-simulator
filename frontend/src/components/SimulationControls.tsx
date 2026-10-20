@@ -187,6 +187,18 @@ function SimulationControls({
             format: (value: number) => `${value}`
         },
         {
+            label: "Average queue length",
+            lowerBetter: true,
+            getValue: (metrics: SimulationMetrics) => metrics.averageQueueLength,
+            format: (value: number) => `${value.toFixed(1)} patients`
+        },
+        {
+            label: "Max queue length",
+            lowerBetter: true,
+            getValue: (metrics: SimulationMetrics) => metrics.maxQueueLength,
+            format: (value: number) => `${value.toFixed(1)} patients`
+        },
+        {
             label: "Non-urgent",
             lowerBetter: true,
             getValue: (metrics: SimulationMetrics) => metrics.averageWaitByPriority.nonUrgent,

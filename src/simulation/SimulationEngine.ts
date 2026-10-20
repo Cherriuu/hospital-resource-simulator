@@ -15,6 +15,12 @@ export class SimulationEngine {
     private patientsById: Map<number, Patient>;
     private eventQueue: EventQueue | ArrayEventQueue;
     private treatmentStartTimes: Map<number, number> = new Map();
+    private busyTimeByType: Record<string, number> = {};
+    private queueBusyTime: number = 0;
+    private maxQueueLength: number = 0;
+    private averageQueueLength: number = 0;
+    private blockedBy: Record<string, number> = {};
+    private blockedPatients: Set<number> = new Set();
 
     // Patients who arrived but could not get resources
     private waitingPatients: Patient[] = [];
@@ -69,6 +75,8 @@ export class SimulationEngine {
                 break;
             }
 
+            this.recordTimeSlice(event.time - this.currentTime);
+
             // Jump the simulation clock to this event
             this.currentTime = event.time;
 
@@ -80,6 +88,29 @@ export class SimulationEngine {
                 this.HandleTreatmentComplete(event);
             }
         }
+
+        this.averageQueueLength = this.currentTime > 0 ? this.queueBusyTime / this.currentTime : 0;
+    }
+
+    private recordTimeSlice(gap: number): void {
+        if (gap <= 0) {
+            return;
+        }
+
+        const snapshot = this.resourceManager.getResourceSnapshot();
+
+        for (const [resourceName, totalCount] of Object.entries(snapshot.total.resources)) {
+            const used = totalCount - snapshot.available.resources[resourceName as keyof typeof snapshot.available.resources];
+            this.busyTimeByType[resourceName] = (this.busyTimeByType[resourceName] ?? 0) + (used * gap);
+        }
+
+        for (const [personnelName, totalCount] of Object.entries(snapshot.total.personnel)) {
+            const used = totalCount - snapshot.available.personnel[personnelName as keyof typeof snapshot.available.personnel];
+            this.busyTimeByType[personnelName] = (this.busyTimeByType[personnelName] ?? 0) + (used * gap);
+        }
+
+        this.queueBusyTime += this.waitingPatients.length * gap;
+        this.maxQueueLength = Math.max(this.maxQueueLength, this.waitingPatients.length);
     }
 
     private HandlePatientArrival(event: SimulationEvent): void {
@@ -105,7 +136,21 @@ export class SimulationEngine {
 
             this.StartTreatment(patient);
         } else {
+            this.blockPatientIfNeeded(patient);
             this.waitingPatients.push(patient);
+        }
+    }
+
+    private blockPatientIfNeeded(patient: Patient): void {
+        if (this.blockedPatients.has(patient.id)) {
+            return;
+        }
+
+        const missingType = this.resourceManager.findMissingResource(patient);
+
+        if (missingType !== null) {
+            this.blockedBy[missingType] = (this.blockedBy[missingType] ?? 0) + 1;
+            this.blockedPatients.add(patient.id);
         }
     }
 
@@ -186,6 +231,43 @@ export class SimulationEngine {
         }
 
         this.waitingPatients = stillWaiting;
+    }
+
+    public getUtilization(): Record<string, number> {
+        const result: Record<string, number> = {};
+        const duration = this.currentTime;
+
+        for (const [typeName, totalCount] of Object.entries(this.resourceManager.getResourceSnapshot().total.resources)) {
+            if (totalCount === 0 || duration === 0) {
+                result[typeName] = 0;
+                continue;
+            }
+
+            result[typeName] = (this.busyTimeByType[typeName] ?? 0) / (totalCount * duration) * 100;
+        }
+
+        for (const [typeName, totalCount] of Object.entries(this.resourceManager.getResourceSnapshot().total.personnel)) {
+            if (totalCount === 0 || duration === 0) {
+                result[typeName] = 0;
+                continue;
+            }
+
+            result[typeName] = (this.busyTimeByType[typeName] ?? 0) / (totalCount * duration) * 100;
+        }
+
+        return result;
+    }
+
+    public getAverageQueueLength(): number {
+        return this.currentTime > 0 ? this.queueBusyTime / this.currentTime : 0;
+    }
+
+    public getMaxQueueLength(): number {
+        return this.maxQueueLength;
+    }
+
+    public getBlockedBy(): Record<string, number> {
+        return { ...this.blockedBy };
     }
 
     public getUntreatedPatientsCount(): number {
