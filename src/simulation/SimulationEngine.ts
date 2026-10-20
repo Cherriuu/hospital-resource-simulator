@@ -1,14 +1,19 @@
 import type { Patient } from "../models/Patient.js";
-import { EventQueue } from "./EventQueue.js";
+import { ArrayEventQueue, EventQueue } from "./EventQueue.js";
 import { ResourceManager } from "../resources/resourcemanager.js";
 import type { SimulationEvent } from "../models/SimulationEvent.js";
 import type { SimulationResult } from "../models/SimulationResult.js";
 import { Scheduler } from "../scheduling/Scheduler.js";
 
+export interface SimulationEngineOptions {
+    queueType?: "heap" | "array";
+}
+
 export class SimulationEngine {
     private resourceManager: ResourceManager;
     private patients: Patient[];
-    private eventQueue: EventQueue;
+    private patientsById: Map<number, Patient>;
+    private eventQueue: EventQueue | ArrayEventQueue;
     private treatmentStartTimes: Map<number, number> = new Map();
 
     // Patients who arrived but could not get resources
@@ -25,10 +30,16 @@ export class SimulationEngine {
 
     private scheduler: Scheduler;
 
-    constructor(resourceManager: ResourceManager, patients: Patient[], scheduler: Scheduler) {
+    constructor(
+        resourceManager: ResourceManager,
+        patients: Patient[],
+        scheduler: Scheduler,
+        options: SimulationEngineOptions = {}
+    ) {
         this.resourceManager = resourceManager;
         this.patients = patients;
-        this.eventQueue = new EventQueue();
+        this.patientsById = new Map(patients.map((patient) => [patient.id, patient]));
+        this.eventQueue = options.queueType === "array" ? new ArrayEventQueue() : new EventQueue();
         this.scheduler = scheduler;
     }
 
@@ -76,9 +87,7 @@ export class SimulationEngine {
             return;
         }
 
-        const patient = this.patients.find(
-            p => p.id === event.patientid
-        );
+        const patient = this.patientsById.get(event.patientid);
 
         if (patient === undefined) {
             console.error(
@@ -127,9 +136,7 @@ export class SimulationEngine {
             return;
         }
 
-        const patient = this.patients.find(
-            p => p.id === event.patientid
-        );
+        const patient = this.patientsById.get(event.patientid);
 
         if (patient === undefined) {
             console.error(
