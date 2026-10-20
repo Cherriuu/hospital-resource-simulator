@@ -12,6 +12,10 @@ export interface SimulationMetrics {
 
     readonly completedPatients: number;
 
+    readonly untreatedPatients: number;
+
+    readonly requestedPatients: number;
+
     readonly simulationDuration: number | undefined;
 
     readonly throughput: number | undefined;

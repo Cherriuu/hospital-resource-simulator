@@ -99,4 +99,45 @@ describe("SimulationEngine", () => {
             expect(result.treatmentDuration).toBeGreaterThan(0);
         }
     });
+
+    it("counts untreated patients when ICU capacity is zero", () => {
+        const snapshot = structuredClone(InitialResourceSnapshot);
+        snapshot.available.resources.icu_bed = 0;
+        snapshot.available.personnel.physician = 20;
+        snapshot.available.personnel.nurse = 20;
+
+        const patients = [
+            makePatient(1, 0, "non_urgent", 5),
+            makePatient(2, 1, "resuscitation", 5),
+            { ...makePatient(3, 2, "urgent", 5), resourcesNeeded: { resources: {}, personnel: { nurse: 1 } } },
+            { ...makePatient(4, 3, "less_urgent", 5), resourcesNeeded: { resources: { icu_bed: 1 }, personnel: { physician: 1, nurse: 1 } } },
+            { ...makePatient(5, 4, "emergent", 5), resourcesNeeded: { resources: { icu_bed: 1 }, personnel: { physician: 1, nurse: 1 } } }
+        ];
+
+        const engine = new SimulationEngine(new ResourceManager(snapshot), patients, new PriorityScheduler());
+
+        engine.RunSimulation();
+
+        const untreated = patients.filter(
+            patient => patient.resourcesNeeded.resources.icu_bed === 1
+        ).length;
+
+        expect(engine.getUntreatedPatientsCount()).toBe(untreated);
+    });
+
+    it("returns zero untreated patients when capacity is normal", () => {
+        const snapshot = structuredClone(InitialResourceSnapshot);
+
+        const patients = [
+            makePatient(1, 0, "non_urgent", 5),
+            makePatient(2, 0.5, "urgent", 5),
+            makePatient(3, 1, "less_urgent", 5)
+        ];
+
+        const engine = new SimulationEngine(new ResourceManager(snapshot), patients, new PriorityScheduler());
+
+        engine.RunSimulation();
+
+        expect(engine.getUntreatedPatientsCount()).toBe(0);
+    });
 });

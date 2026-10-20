@@ -181,6 +181,10 @@ export class SimulationEngine {
         this.waitingPatients = stillWaiting;
     }
 
+    public getUntreatedPatientsCount(): number {
+        return this.waitingPatients.length;
+    }
+
     public getSimulationResults(): SimulationResult[] {
         return this.simulationResults;
     }

@@ -6,6 +6,8 @@ export type SimulationMetrics = {
     throughput: number;
     percentWaited: number;
     completedPatients: number;
+    untreatedPatients: number;
+    requestedPatients: number;
     simulationDuration: number;
 
     averageWaitByPriority: {

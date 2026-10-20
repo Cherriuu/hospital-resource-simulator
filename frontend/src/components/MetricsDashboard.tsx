@@ -26,6 +26,16 @@ function MetricsDashboard({ metrics }: MetricsDashboardProps) {
                 Simulation Results
             </h2>
 
+            <p className="mb-4 font-serif text-xl text-orange-950">
+                {metrics.completedPatients} of {metrics.requestedPatients} patients treated
+            </p>
+
+            {metrics.untreatedPatients > 0 && (
+                <div className="mb-4 rounded border border-orange-300 bg-orange-100 px-4 py-3 font-serif text-sm text-orange-900">
+                    {metrics.untreatedPatients} patients were never treated. Wait times only include treated patients.
+                </div>
+            )}
+
             <div className="grid grid-cols-3 gap-4">
                 <MetricCard
                     title="Average Wait"
@@ -66,6 +76,12 @@ function MetricsDashboard({ metrics }: MetricsDashboardProps) {
                 <MetricCard
                     title="Completed Patients"
                     value={metrics.completedPatients}
+                    unit="patients"
+                />
+
+                <MetricCard
+                    title="Untreated Patients"
+                    value={metrics.untreatedPatients}
                     unit="patients"
                 />
 

@@ -3,9 +3,17 @@ import type { SimulationMetrics } from "../models/SimulationMetrics.js"
 
 export class MetricsCollector {
     private simulationResults: SimulationResult[] = [];
+    private untreatedPatients: number;
+    private requestedPatients: number;
 
-    constructor(simulationResults: SimulationResult[]) {
+    constructor(
+        simulationResults: SimulationResult[],
+        untreatedPatients: number = 0,
+        requestedPatients: number = 0
+    ) {
         this.simulationResults = simulationResults;
+        this.untreatedPatients = untreatedPatients;
+        this.requestedPatients = requestedPatients;
     }
 
     public calculateAverageWaitingTime(): number | undefined {
@@ -226,6 +234,8 @@ export class MetricsCollector {
         maxWaitingTime: this.findMaxWaitingTime(),
         waitingPercentage: this.calculateWaitingPercentage(),
         completedPatients: this.completedPatientsCount(),
+        untreatedPatients: this.untreatedPatients,
+        requestedPatients: this.requestedPatients,
         simulationDuration: this.calculateSimulationDuration(),
         throughput: this.calculateThroughput(),
         averageWaitingTimeNonUrgent: this.calculateAverageWaitingTimeForNonUrgentPatients(),
