@@ -1,5 +1,5 @@
-import type { SimulationResult } from "../models/SimulationResult";
-import type { SimulationMetrics } from "../models/SimulationMetrics"
+import type { SimulationResult } from "../models/SimulationResult.js";
+import type { SimulationMetrics } from "../models/SimulationMetrics.js"
 
 export class MetricsCollector {
     private simulationResults: SimulationResult[] = [];

@@ -1,34 +1,32 @@
 import express from "express";
 
-import { PatientGenerator } from "../generators/patientgenerator";
-import { SeededRandom } from "../random/seededrandom";
+import { PatientGenerator } from "../generators/patientgenerator.js";
+import { SeededRandom } from "../random/seededrandom.js";
 
 import {
     NormalProfile,
     MassCasualtyProfile,
     FluSurgeProfile
-} from "../config/Workloadprofiles";
+} from "../config/Workloadprofiles.js";
 
-import type { WorkloadProfile } from "../models/WorkloadProfile";
+import type { WorkloadProfile } from "../models/WorkloadProfile.js";
 
 import {
     ResourceManager,
     InitialResourceSnapshot
-} from "../resources/resourcemanager";
+} from "../resources/resourcemanager.js";
 
-import { SimulationEngine } from "../simulation/SimulationEngine";
+import { SimulationEngine } from "../simulation/SimulationEngine.js";
 
-import type { Scheduler } from "../scheduling/Scheduler";
-import { FCFSScheduler } from "../scheduling/FCFSScheduler";
-import { PriorityScheduler } from "../scheduling/PriorityScheduler";
-import { PriorityandAgingScheduler } from "../scheduling/Priority+Aging";
+import type { Scheduler } from "../scheduling/Scheduler.js";
+import { FCFSScheduler } from "../scheduling/FCFSScheduler.js";
+import { PriorityScheduler } from "../scheduling/PriorityScheduler.js";
+import { PriorityandAgingScheduler } from "../scheduling/Priority+Aging.js";
 
-import { MetricsCollector } from "../metrics/MetricsCollector";
+import { MetricsCollector } from "../metrics/MetricsCollector.js";
 
 
 const app = express();
-const PORT = 3000;
-
 app.use(express.json());
 
 
@@ -211,8 +209,4 @@ app.post("/api/simulations", (req, res) => {
 });
 
 
-app.listen(PORT, () => {
-    console.log(
-        `Server running on port ${PORT}`
-    );
-});
+export default app;

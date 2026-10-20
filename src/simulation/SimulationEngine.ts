@@ -1,9 +1,9 @@
-import type { Patient } from "../models/Patient";
-import { EventQueue } from "./EventQueue";
-import { ResourceManager } from "../resources/resourcemanager";
-import type { SimulationEvent } from "../models/SimulationEvent";
-import type { SimulationResult } from "../models/SimulationResult";
-import { Scheduler } from "../scheduling/Scheduler";
+import type { Patient } from "../models/Patient.js";
+import { EventQueue } from "./EventQueue.js";
+import { ResourceManager } from "../resources/resourcemanager.js";
+import type { SimulationEvent } from "../models/SimulationEvent.js";
+import type { SimulationResult } from "../models/SimulationResult.js";
+import { Scheduler } from "../scheduling/Scheduler.js";
 
 export class SimulationEngine {
     private resourceManager: ResourceManager;
