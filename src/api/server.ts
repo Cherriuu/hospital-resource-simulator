@@ -10,6 +10,7 @@ import {
 } from "../config/Workloadprofiles.js";
 
 import type { WorkloadProfile } from "../models/WorkloadProfile.js";
+import type { HospitalCapacity, PersonnelCounts, ResourceCounts } from "../models/Resources.js";
 
 import {
     ResourceManager,
@@ -44,7 +45,7 @@ const PERSONNEL_KEYS = [
     "anesthesiologist"
 ] as const;
 
-function validateCapacity(capacity: unknown): { resources: Record<string, number>; personnel: Record<string, number> } {
+function validateCapacity(capacity: unknown): HospitalCapacity {
     const defaultCapacity = structuredClone(InitialResourceSnapshot.total);
 
     if (capacity === undefined) {
@@ -88,7 +89,7 @@ function validateCapacity(capacity: unknown): { resources: Record<string, number
         throw new Error(`capacity.personnel.${unknownPersonnelKeys[0]} is not allowed`);
     }
 
-    const validatedResources: Record<string, number> = {};
+    const validatedResources = {} as ResourceCounts;
     for (const key of RESOURCE_KEYS) {
         if (!(key in resources)) {
             throw new Error(`capacity.resources.${key} is required`);
@@ -96,14 +97,14 @@ function validateCapacity(capacity: unknown): { resources: Record<string, number
 
         const value = resources[key];
 
-        if (!Number.isInteger(value) || value < 0 || value > MAX_CAPACITY_VALUE) {
+        if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > MAX_CAPACITY_VALUE) {
             throw new Error(`capacity.resources.${key} must be a whole number between 0 and ${MAX_CAPACITY_VALUE}`);
         }
 
         validatedResources[key] = value;
     }
 
-    const validatedPersonnel: Record<string, number> = {};
+    const validatedPersonnel = {} as PersonnelCounts;
     for (const key of PERSONNEL_KEYS) {
         if (!(key in personnel)) {
             throw new Error(`capacity.personnel.${key} is required`);
@@ -111,7 +112,7 @@ function validateCapacity(capacity: unknown): { resources: Record<string, number
 
         const value = personnel[key];
 
-        if (!Number.isInteger(value) || value < 0 || value > MAX_CAPACITY_VALUE) {
+        if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > MAX_CAPACITY_VALUE) {
             throw new Error(`capacity.personnel.${key} must be a whole number between 0 and ${MAX_CAPACITY_VALUE}`);
         }
 
@@ -176,7 +177,7 @@ app.post("/api/simulations", (req, res) => {
             });
         }
 
-        let normalizedCapacity;
+        let normalizedCapacity: HospitalCapacity;
 
         try {
             normalizedCapacity = validateCapacity(capacity);
