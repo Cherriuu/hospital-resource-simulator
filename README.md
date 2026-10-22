@@ -1,20 +1,26 @@
 # Hospital Resource Allocation Simulator
 
-Hospital Resource Allocation Simulator is a full-stack discrete-event simulation for exploring how hospital scheduling policies behave when patients compete for limited resources and personnel.
+**[Live Demo](https://hospital-resource-simulator.vercel.app)**
 
-Patients are modeled using the five-level **Emergency Severity Index (ESI)** triage system. I built the project to compare different scheduling strategies and explore the tradeoff between prioritizing high-acuity patients and preventing lower-priority patients from waiting indefinitely.
+A full-stack discrete-event simulator for exploring how hospital scheduling policies behave when patients compete for limited beds and staff. Patients are modeled with the five-level **Emergency Severity Index (ESI)** triage system and generated from CDC triage data. I built it to compare scheduling strategies and study the tradeoff between prioritizing high-acuity patients and keeping lower-priority patients from waiting indefinitely.
+
+## Highlights
+
+- **All-or-nothing resource allocator:** beds and staff are assigned only when a patient's *entire* set of requirements is available, then waiting patients are re-evaluated whenever resources are released
+- **Three schedulers:** FCFS, priority, and capped priority-aging
+- **Binary-heap event queue:** 10,000-patient runs are ~40x faster than an array-based queue, with fully reproducible results
+- **Evaluated across five seeded mass-casualty runs:** capped aging reduced non-urgent patient waits by ~50% versus priority-only scheduling, without delaying emergent or resuscitation patients
 
 ## What it does
 
 - Simulates patient arrivals, waiting, treatment, and resource release
-- Models five ESI-inspired patient priority levels
-- Tracks physical resources including ward beds, ICU beds, operating rooms, isolation rooms, and imaging rooms
-- Tracks ED staff roles including nurses and physicians
-- Supports normal, flu-surge, and mass-casualty workload profiles
-- Compares FCFS, priority, and priority-aging scheduling strategies
-- Uses seeded random generation so simulations can be reproduced
-- Tracks average, median, p95, and maximum patient wait times
-- Measures throughput and wait times for each triage level
+- Models five ESI-based patient priority levels
+- Tracks physical resources: ward beds, ICU beds, operating rooms, isolation rooms, and imaging rooms
+- Tracks staff roles: nurses and physicians
+- Supports configurable scenarios, staffing, and bed capacity, with normal, flu-surge, and mass-casualty workload profiles
+- Uses seeded random generation so any run can be reproduced
+- Reports average, median, P95, and maximum wait times, plus throughput and queue length
+- Breaks down wait times by triage level
 - Provides a React interface for configuring simulations and viewing results
 
 ## Tech Stack
@@ -25,11 +31,13 @@ Patients are modeled using the five-level **Emergency Severity Index (ESI)** tri
 
 **Testing:** Vitest
 
+**Deployment:** Vercel
+
 ## How it works
 
-The React frontend sends the selected workload, scheduling strategy, patient count, and random seed to the Express API. The backend generates the patient population and passes it to the discrete-event simulation engine.
+The React frontend sends the workload, scheduling strategy, patient count, and random seed to the Express API. The backend generates the patient population and runs it through the simulation engine.
 
-```text
+```
 React
   ↓
 Express API
@@ -45,64 +53,53 @@ Metrics Collector
 Simulation Results
 ```
 
-Instead of advancing time at fixed intervals, the simulation processes events such as patient arrivals and treatment completions. When treatment finishes, the patient's resources are released and become available to waiting patients.
+Instead of advancing time in fixed steps, the simulation processes events such as patient arrivals and treatment completions, ordered by a binary-heap event queue. When treatment finishes, the patient's resources are released and waiting patients are re-evaluated.
 
 ### Resource Allocation
 
-Patients can require multiple resources and personnel at the same time. Before treatment begins, the resource manager checks whether the patient's **entire set of requirements** is available.
+Patients can need several resources at once. For example:
 
-For example, a patient might require:
-
-```text
+```
 ICU bed
 + physician
 + 2 nurses
 ```
 
-If one requirement is unavailable, nothing is allocated and the patient continues waiting. This prevents scarce resources from being partially reserved by patients who cannot yet begin treatment.
+Before treatment begins, the allocator checks whether the full set is available. If any requirement is missing, nothing is reserved and the patient keeps waiting. This stops scarce resources from being partially held by patients who can't start yet.
 
 ### Scheduling
 
-The simulator implements three scheduling strategies:
+- **FCFS:** patients are treated in arrival order
+- **Priority:** higher-acuity patients go first
+- **Capped priority-aging:** acuity still comes first, but patients who have waited longer gradually gain effective priority, up to a cap so they can't leapfrog the most critical patients
 
-- **FCFS** — treats patients in arrival order
-- **Priority** — treats higher-acuity patients first
-- **Priority + Aging** — prioritizes acuity while gradually increasing the effective priority of patients who have waited longer
-
-Strict priority scheduling protects high-acuity patients but can cause lower-priority patients to experience extremely long waits. Priority aging was added to reduce this starvation while preserving triage-based prioritization.
+Strict priority protects high-acuity patients but can starve lower-priority ones. Capped aging reduces that starvation while keeping triage-based prioritization intact.
 
 ## Workload Profiles
 
-The simulator can run under three different hospital conditions:
+- **Normal:** typical patient demand
+- **Flu Surge:** increased pressure from widespread illness
+- **Mass Casualty:** a high-volume emergency scenario
 
-**Normal** represents typical patient demand, while **Flu Surge** increases pressure associated with widespread illness and **Mass Casualty** models a high-volume emergency scenario.
-
-Each profile changes the generated patient workload, allowing the scheduling strategies to be compared under different levels and types of resource contention.
+Each profile changes the generated patient workload, so the schedulers can be compared under different kinds of resource contention.
 
 ## Reproducible Simulations
 
-Patient generation uses a seeded pseudo-random number generator. Running a simulation with the same seed and workload profile produces the same generated patient population.
-
-This makes scheduling comparisons more meaningful because FCFS, priority, and priority aging can be evaluated against equivalent workloads rather than different random patients.
+Patient generation uses a seeded pseudo-random number generator. The same seed and workload profile always produce the same patient population, so FCFS, priority, and capped aging are compared on identical workloads rather than different random patients.
 
 ## Metrics and Results
 
 Each simulation reports:
 
-- Average, median, p95, and maximum wait time
+- Average, median, P95, and maximum wait time
 - Percentage of patients who waited
-- Patient throughput
-- Number of completed patients
-- Total simulation duration
-- Average wait time for each ESI priority level
-
-Across five seeded simulations of **10,000 patients**, priority aging reduced worst-case patient wait time by approximately **88%** compared with priority-only scheduling.
-
-The simulator also tracks wait times separately by triage level so improvements for lower-priority patients can be evaluated against their effect on high-acuity patients.
+- Throughput and number of completed patients
+- Queue length and total simulation duration
+- Average wait time for each ESI level
 
 ## Project Structure
 
-```text
+```
 src/
 ├── api/          # Express API
 ├── config/       # Workload profiles
@@ -116,31 +113,33 @@ src/
 
 frontend/
 └── src/          # React frontend
+
+tests/            # Vitest tests
 ```
 
 ## Running the Project
 
-Install the backend dependencies:
+Install backend dependencies:
 
-```bash
+```
 npm install
 ```
 
 Run the simulation from the command line:
 
-```bash
+```
 npm run dev
 ```
 
 Run the API:
 
-```bash
+```
 npx tsx src/api/server.ts
 ```
 
 Then start the frontend in another terminal:
 
-```bash
+```
 cd frontend
 npm install
 npm run dev
@@ -148,16 +147,14 @@ npm run dev
 
 ## Status
 
-The discrete-event simulation engine, resource allocation system, scheduling strategies, metrics collection, API, and frontend are working.
-
-I'm currently expanding testing, benchmark analysis, and deployment.
+Deployed and working: the simulation engine, resource allocator, three schedulers, metrics collection, API, and frontend.
 
 ## Vercel Deployment
 
-Import the repository as one Vercel project. Set **Root Directory** to the repository root (leave it blank), rather than `frontend` or `backend`. The checked-in `vercel.json` sets the Vite framework, installs both packages, builds the frontend, and serves `frontend/dist`.
+Import the repository as one Vercel project. Set **Root Directory** to the repository root (leave it blank), not `frontend` or `backend`. The checked-in `vercel.json` sets the Vite framework, installs both packages, builds the frontend, and serves `frontend/dist`.
 
-The root `api/health.ts` and `api/simulations.ts` files expose the existing Express app as Vercel Functions. The frontend calls `/api/simulations` on the same domain. No database or separate backend host is required; every simulation runs in memory.
+The root `api/health.ts` and `api/simulations.ts` files expose the Express app as Vercel Functions. The frontend calls `/api/simulations` on the same domain. No database or separate backend host is needed; every simulation runs in memory.
 
-If the project previously used the Services framework, switch the project framework preset to **Vite** and clear conflicting install/build/output overrides so the checked-in configuration applies. Redeploy after updating the settings.
+If the project previously used the Services framework, switch the framework preset to **Vite** and clear any conflicting install/build/output overrides so the checked-in configuration applies. Redeploy after updating the settings.
 
-Verify the deployment by opening `/api/health` (it should return JSON), then run a simulation and confirm the results appear.
+To verify, open `/api/health` (it should return JSON), then run a simulation and confirm results appear.
